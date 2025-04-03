@@ -37,6 +37,7 @@ uniform int window_height = 1043;
 
 
 // CONFIG PARAMETERS
+// TODO: I got the ok to change this so can control x and y!!!
 // NOTE: changing this to uniform
 uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
