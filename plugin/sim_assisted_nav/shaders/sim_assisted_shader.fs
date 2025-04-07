@@ -35,12 +35,6 @@ uniform float small_window_disparity = 0.1;
 uniform int window_width = 1920;
 uniform int window_height = 1043;
 
-// adding in to clamp the y position
-vec2 clamp_small_window_y(float y, float height) {
-    float clamped_y = clamp(y, 0.0, 1.0 - height);
-    return vec2(0.0, clamped_y);
-}
-
 
 // CONFIG PARAMETERS
 // TODO: I got the ok to change this so can control x and y!!!
@@ -96,9 +90,12 @@ void main()
     float small_window_width = small_window_height / aspect_ratio;
     vec2 rect_size = vec2(small_window_width, small_window_height);
 
+    float clamped_disparity = clamp(small_window_disparity, 0.0, 0.5 - small_window_width);
+
     vec2 clamped_pos = clamp_small_window_y(small_window_y_pos, small_window_height);
-    vec2 left_small_window_pos = vec2(0.5 - rect_size.x - small_window_disparity, clamped_pos.y);
-    vec2 right_small_window_pos = vec2(small_window_disparity, clamped_pos.y);
+    vec2 left_small_window_pos = vec2(0.5 - rect_size.x - clamped_disparity, clamped_pos.y);
+    vec2 right_small_window_pos = vec2(clamped_disparity, clamped_pos.y);
+
 
     if (output_loc[0] <= 0.5)
     {

@@ -216,10 +216,19 @@ void afCameraHMD::updateHMDParams()
     //    cerr << "INFO! Shader ID " << id << endl;
     glUseProgram(id);
 
-    // m_quadMesh->m_texture which points m_rosImageTexture gets automatically assigned to texture unit 0.
+    // Need to add the binding!!!... these are no longer automatically assigned!
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_rosImageTexture->getTextureId());
     glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
-    // m_quadMesh->m_metallic which points to a frameBuffer gets assigned to texture unit 2.
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, m_camera->m_frameBuffer->m_imageBuffer->getTextureId());
     glUniform1i(glGetUniformLocation(id, "frameBufferTexture"), 2);
+
+    // m_quadMesh->m_texture which points m_rosImageTexture gets automatically assigned to texture unit 0.
+    // glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
+    // m_quadMesh->m_metallic which points to a frameBuffer gets assigned to texture unit 2.
+    // glUniform1i(glGetUniformLocation(id, "frameBufferTexture"), 2);
 
     // Additional parameters
     glUniform1f(glGetUniformLocation(id, "small_window_disparity"), window_disparity);
@@ -258,6 +267,9 @@ void afCameraHMD::create_stereo_cam_info_from_yaml(string cam_name, const afBase
     // cerr << "INFO! SPECIFICATION DATA " << a_objectAttribs->getSpecificationData().m_rawData << endl;
     specificationDataNode = YAML::Load(a_objectAttribs->getSpecificationData().m_rawData);
     YAML::Node plugin_config = specificationDataNode["sim_assisted_nav_plugin_config"];
+    
+    // NOTE: adding this to debug check
+    std::cout << "[DEBUG] YAML loaded - left topic: " << plugin_config["left_rostopic"] << std::endl;
 
     if (plugin_config.IsDefined())
     {
@@ -454,6 +466,23 @@ void afCameraHMD::update_ros_textures_for_headset()
     //  cerr << "INFO! Image Sizes" << msg->width << "x" << msg->height << " - " << msg->encoding << endl;
     m_rosImageTexture->markForUpdate();
 
+
+    // TEMPORARY DEBUGGING:
+    static bool debug_saved = false;
+    if (!debug_saved && !concat_img_ptr->image.empty())
+    {
+        std::cout << "[DEBUG] Saving debug image to /tmp/debug_concat_image.png\n";
+        bool success = cv::imwrite("/tmp/debug_concat_image.png", concat_img_ptr->image);
+        if (success) {
+            std::cout << "[DEBUG] Image saved successfully.\n";
+        } else {
+            std::cerr << "[DEBUG] Failed to write image.\n";
+        }
+        debug_saved = true;
+    }
+
+
+
     // cv::imshow("Concat image", concat_img_ptr->image);
     // cv::waitKey(1);
     // cv::resize(cv_ptr2->image,cv_ptr2->image,cv::Size(cv_ptr2->image.cols/2,cv_ptr2->image.rows/2));
@@ -491,6 +520,7 @@ void afCameraHMD::windowSizeCallback(GLFWwindow *window_ptr, int width, int heig
 
 void afCameraHMD::window_location_callback(const geometry_msgs::Point::ConstPtr &msg) {
     small_window_y_pos = msg->y;
+    window_disparity = msg->x;
     updateHMDParams(); // call function that pushes the change to the shader
 }
 

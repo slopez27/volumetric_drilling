@@ -39,10 +39,14 @@ class SimAssistedNavGUI(QWidget):
         # TODO: double check these positions in the box
         grid = QGridLayout()
 
-        self.add_button(grid, "Top Left", lambda: self.update_location(0.75), 0, 1)
-        self.add_button(grid, "Top Right", lambda: self.update_location(0.75), 0, 2)
-        self.add_button(grid, "Bottom Left", lambda: self.update_location(0.25), 1, 1)
-        self.add_button(grid, "Bottom Right", lambda: self.update_location(0.25), 1, 2)
+        self.add_button(grid, "Top Left", lambda: self.update_location(0.1, 0.75), 0, 1)
+        self.add_button(grid, "Top Right", lambda: self.update_location(0.4, 0.75), 0, 2)
+        self.add_button(grid, "Bottom Left", lambda: self.update_location(0.1, 0.25), 1, 1)
+        self.add_button(grid, "Bottom Right", lambda: self.update_location(0.4, 0.25), 1, 2)
+
+        # self.add_button(grid, "Move Left", lambda: self.update_disparity_manual(-0.01), 2, 1)
+        # self.add_button(grid, "Move Right", lambda: self.update_disparity_manual(0.01), 2, 2)
+
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Window Size"))
@@ -64,14 +68,22 @@ class SimAssistedNavGUI(QWidget):
         msg.x = min(max(height, 0.1), 0.5)
         self.size_pub.publish(msg)
 
-    def update_location(self, y_pos):
+    def update_location(self, x_pos, y_pos):
         msg = Point()
+        msg.x = x_pos 
         msg.y = y_pos
         self.location_pub.publish(msg)
+
     
     def update_disparity(self, value):
         disparity = value / 100.0
         self.disparity_pub.publish(Float32(data=disparity))
+
+    def update_disparity_manual(self, delta):
+        current = self.disparity_slider.value() / 100.0
+        new_val = min(max(current + delta, 0.0), 0.5)  
+        self.disparity_slider.setValue(int(new_val * 100)) 
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
