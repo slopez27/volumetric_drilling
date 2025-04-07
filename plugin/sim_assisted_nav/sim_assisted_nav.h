@@ -102,6 +102,7 @@ public:
     float window_disparity = 0.1;
     // New member variable for location
     float small_window_y_pos = 0.60f;  
+    float small_window_x_pos = 0.1;
     // New member variable for size
     float small_window_height = 0.38f;
 

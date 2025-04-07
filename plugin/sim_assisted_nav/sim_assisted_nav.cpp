@@ -239,6 +239,8 @@ void afCameraHMD::updateHMDParams()
     // for the uniforms that need to add
     glUniform1f(glGetUniformLocation(id, "small_window_y_pos"), small_window_y_pos);
     glUniform1f(glGetUniformLocation(id, "small_window_height"), small_window_height);
+    glUniform1f(glGetUniformLocation(id, "small_window_x_pos"), small_window_x_pos);
+
 }
 
 void afCameraHMD::makeFullScreen()
@@ -520,6 +522,7 @@ void afCameraHMD::windowSizeCallback(GLFWwindow *window_ptr, int width, int heig
 
 void afCameraHMD::window_location_callback(const geometry_msgs::Point::ConstPtr &msg) {
     small_window_y_pos = msg->y;
+    small_window_x_pos = msg->z;
     window_disparity = msg->x;
     updateHMDParams(); // call function that pushes the change to the shader
 }

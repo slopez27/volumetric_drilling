@@ -39,11 +39,11 @@ class SimAssistedNavGUI(QWidget):
         # TODO: double check these positions in the box
         grid = QGridLayout()
 
-        self.add_button(grid, "Top Left", lambda: self.update_location(0.1, 0.75), 0, 1)
-        self.add_button(grid, "Top Right", lambda: self.update_location(0.4, 0.75), 0, 2)
-        self.add_button(grid, "Bottom Left", lambda: self.update_location(0.1, 0.25), 1, 1)
-        self.add_button(grid, "Bottom Right", lambda: self.update_location(0.4, 0.25), 1, 2)
-
+        self.add_button(grid, "Bottom Right",     lambda: self.update_location(0.002, 0.75, 0.1), 1, 2)
+        self.add_button(grid, "Top Right",    lambda: self.update_location(0.002, 0.75, 0.4), 0, 2)
+        self.add_button(grid, "Bottom Left",  lambda: self.update_location(0.002, 0.25, 0.1), 1, 1)
+        self.add_button(grid, "Top Left", lambda: self.update_location(0.002, 0.25, 0.4), 0, 1)
+        
         # self.add_button(grid, "Move Left", lambda: self.update_disparity_manual(-0.01), 2, 1)
         # self.add_button(grid, "Move Right", lambda: self.update_disparity_manual(0.01), 2, 2)
 
@@ -68,10 +68,11 @@ class SimAssistedNavGUI(QWidget):
         msg.x = min(max(height, 0.1), 0.5)
         self.size_pub.publish(msg)
 
-    def update_location(self, x_pos, y_pos):
+    def update_location(self, disparity, x_pos, y_pos):
         msg = Point()
-        msg.x = x_pos 
+        msg.x = disparity
         msg.y = y_pos
+        msg.z = x_pos
         self.location_pub.publish(msg)
 
     
