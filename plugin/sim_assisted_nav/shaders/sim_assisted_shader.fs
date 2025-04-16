@@ -41,7 +41,7 @@ uniform int window_height = 1043;
 // NOTE: changing this to uniform
 uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
-uniform float small_window_x_pos = 0.1;
+// uniform float small_window_x_pos = 0.1;
 
 // NOTE: Commenting this section out just for now
 // // Adjust the small window's width to ensure it is always square
@@ -80,14 +80,25 @@ vec2 clamp_small_window_y(float y, float height)
     return vec2(0.0, clamped_y);
 }
 
-vec2 clamp_small_window_x(float x, float width, float disparity)
-{
-    float max_x = 1.0 - (2.0 * width + disparity);
+// vec2 clamp_small_window_x(float x, float width, float disparity)
+// {
+//     float max_x = 1.0 - (2.0 * width + disparity);
+//     float clamped_x = clamp(x, 0.0, max_x);
+//     return vec2(clamped_x, 0.0);
+// }
+// NOTE: adding this in for now to see if this fixes the overlap issue
+vec2 clamp_left_window_x(float x, float width, float disparity) {
+    float max_x = 0.5 - width - (disparity / 2.0);
     float clamped_x = clamp(x, 0.0, max_x);
     return vec2(clamped_x, 0.0);
 }
 
-
+vec2 clamp_right_window_x(float x, float width, float disparity) {
+    float min_x = 0.5 + (disparity / 2.0);
+    float max_x = 1.0 - width;
+    float clamped_x = clamp(x, 0.0, max_x - min_x);
+    return vec2(min_x + clamped_x, 0.0);
+}
 
 void main()
 {
@@ -99,15 +110,24 @@ void main()
     float small_window_width = small_window_height / aspect_ratio;
     vec2 rect_size = vec2(small_window_width, small_window_height);
 
-    float clamped_disparity = clamp(small_window_disparity, 0.0, 0.5 - small_window_width);
+    float min_disparity = small_window_width/2.0; // TODO: can't exceed screen halves
+    float max_disparity = 0.5 - min_disparity;
+    float clamped_disparity = clamp(small_window_disparity, min_disparity, max_disparity);
 
-    vec2 clamped_pos = clamp_small_window_y(small_window_y_pos, small_window_height);
-    // vec2 left_small_window_pos = vec2(small_window_x_pos, clamped_pos.y);
-    // vec2 right_small_window_pos = vec2(small_window_x_pos + rect_size.x + clamped_disparity, clamped_pos.y);
 
-    vec2 clamped_x_pos = clamp_small_window_x(small_window_x_pos, small_window_width, clamped_disparity);
-    vec2 left_small_window_pos = vec2(clamped_x_pos.x, clamped_pos.y);
-    vec2 right_small_window_pos = vec2(clamped_x_pos.x + rect_size.x + clamped_disparity, clamped_pos.y);
+    // float clamped_disparity = clamp(small_window_disparity, 0.0, 1.0 - 2.0 * small_window_width);
+
+
+    vec2 clamped_y = clamp_small_window_y(small_window_y_pos, small_window_height);
+
+    float center_x_left = 0.5 - clamped_disparity;
+    float center_x_right = 0.5 + clamped_disparity;
+    vec2 left_small_window_pos = vec2(center_x_left - small_window_width / 2.0, clamped_y.y);
+    vec2 right_small_window_pos = vec2(center_x_right - small_window_width / 2.0, clamped_y.y);
+    // vec2 clamped_pos = clamp_small_window_y(small_window_y_pos, small_window_height);
+    // vec2 clamped_x_pos = clamp_small_window_x(small_window_x_pos, small_window_width, clamped_disparity);
+    // vec2 left_small_window_pos = vec2(clamped_x_pos.x, clamped_pos.y);
+    // vec2 right_small_window_pos = vec2(clamped_x_pos.x + rect_size.x + clamped_disparity, clamped_pos.y);
 
 
     // if (output_loc[0] <= 0.5)
