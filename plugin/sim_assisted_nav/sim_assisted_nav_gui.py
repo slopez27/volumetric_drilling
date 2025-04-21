@@ -26,9 +26,10 @@ class SimAssistedNavGUI(QWidget):
         self.size_pub = rospy.Publisher('/sim_assisted_nav/small_window_size', Point, queue_size=1)
         self.location_pub = rospy.Publisher('/sim_assisted_nav/window_location', Point, queue_size=1)
         self.disparity_pub = rospy.Publisher('/sim_assisted_nav/small_window_disparity', Float32, queue_size=1)
+        self.toggle_pub = rospy.Publisher('/sim_assisted_nav/toggle_sim_microscope', Bool, queue_size=1)
 
         # adding button for changing view of microscope or simulation
-        self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
+        # self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
         self.use_microscope = False
         self.toggle_view_button = QPushButton("Toggle View (Sim/Microscope)")
         self.toggle_view_button.clicked.connect(self.toggle_view)       
@@ -46,25 +47,6 @@ class SimAssistedNavGUI(QWidget):
         self.disparity_slider.setMaximum(50)
         self.disparity_slider.setValue(10)
         self.disparity_slider.valueChanged.connect(self.update_disparity)
-
-        # initialize buttons for window location
-        # TODO: change these!!!!!!!!!!!!!!!!!!!!
-        # grid = QGridLayout()
-
-        # self.add_button(grid, "Bottom Right",     lambda: self.update_location(0.002, 0.75, 0.1), 1, 2)
-        # self.add_button(grid, "Top Right",    lambda: self.update_location(0.002, 0.75, 0.4), 0, 2)
-        # self.add_button(grid, "Bottom Left",  lambda: self.update_location(0.002, 0.25, 0.1), 1, 1)
-        # self.add_button(grid, "Top Left", lambda: self.update_location(0.002, 0.25, 0.4), 0, 1)
-        # self.add_button(grid, "Bottom", lambda: self.update_location(0.1), 1, 1)
-        # self.add_button(grid, "Top", lambda: self.update_location(0.4), 0, 1)
-        
-        # self.add_button(grid, "Move Left", lambda: self.update_disparity_manual(-0.01), 2, 1)
-        # self.add_button(grid, "Move Right", lambda: self.update_disparity_manual(0.01), 2, 2)
-        # self.x_slider = QSlider(Qt.Horizontal)
-        # self.x_slider.setMinimum(0)
-        # self.x_slider.setMaximum(100)
-        # self.x_slider.setValue(int(self.last_location.z * 100))
-        # self.x_slider.valueChanged.connect(self.update_manual_location)
 
         self.y_slider = QSlider(Qt.Horizontal)
         self.y_slider.setMinimum(0)
@@ -87,6 +69,20 @@ class SimAssistedNavGUI(QWidget):
         self.new_user_button = QPushButton("Add New User")
         self.new_user_button.clicked.connect(self.add_new_user)
 
+        # add filepath options
+        self.saved_paths = []
+        self.path_dropdown = QComboBox()
+        self.new_file_path = QPushButton("Add New File Path")
+        self.new_file_path.clicked.connect(self.add_new_file_path)
+
+        # remember last used path
+        self.config_file = 'gui_config.yaml'
+        self.default_path = self.load_default_path()
+
+        if self.default_path:
+            self.path_dropdown.addItem(self.default_path)
+            self.path_dropdown.setCurrentText(self.default_path)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Switch Main View (Simulation/ Microscope)"))
         layout.addWidget(self.toggle_view_button)
@@ -94,12 +90,8 @@ class SimAssistedNavGUI(QWidget):
         layout.addWidget(self.size_slider)
         layout.addWidget(QLabel("Window Disparity"))
         layout.addWidget(self.disparity_slider)
-        layout.addWidget(QLabel("Window Location"))
-        # layout.addWidget(QLabel("Adjust X Location (Left–Right)"))
-        # layout.addWidget(self.x_slider)
         layout.addWidget(QLabel("Adjust Y Location (Bottom–Top)"))
         layout.addWidget(self.y_slider)
-        # layout.addLayout(grid)
         layout.addWidget(self.save_button)
         layout.addWidget(self.load_button)
         layout.addWidget(QLabel("User"))
@@ -107,6 +99,9 @@ class SimAssistedNavGUI(QWidget):
         layout.addWidget(QLabel("Preset"))
         layout.addWidget(self.preset_dropdown)
         layout.addWidget(self.new_user_button)
+        layout.addWidget(QLabel("Add FilePath"))
+        layout.addWidget(self.path_dropdown)
+        layout.addWidget(self.new_file_path)
 
         self.setLayout(layout)
 
@@ -169,9 +164,12 @@ class SimAssistedNavGUI(QWidget):
                 'z': self.last_location.z,
             }   
         }
-        # TODO: need to change this so that it is dynamic!!!!
-        # user_id = "user1"    
-        filename = f'window_configurations.yaml'
+        selected_path = self.path_dropdown.currentText()
+        if not selected_path:
+            print("No file path selected!")
+            return
+
+        filename = os.path.join(selected_path, 'window_configurations.yaml')
         
         if os.path.exists(filename):
             with open(filename, 'r') as f:
@@ -193,14 +191,21 @@ class SimAssistedNavGUI(QWidget):
     def load_config(self):
         user_id = self.user_dropdown.currentText()
         preset = self.preset_dropdown.currentText()
-        filename = 'window_configurations.yaml'
+        path = self.path_dropdown.currentText()
+
+        if not path:
+            print("No file path selected!")
+            return
+        
+        filename = os.path.join(selected_path, 'window_configurations.yaml')
 
         if not os.path.exists(filename):
             print("No configuration file found.")
             return
+
         with open(filename, 'r') as f:
-            # config = yaml.safe_load(f)
             all_configs = yaml.safe_load(f) or {}
+
         config = all_configs.get(user_id, {}).get(preset)
 
         if not config:
@@ -280,11 +285,35 @@ class SimAssistedNavGUI(QWidget):
         self.user_dropdown.setCurrentText(new_user)
     
     def toggle_view(self):
-        self.use_microscope = not self.use_microscope
-        self.view_toggle_pub.publish(Bool(data=self.use_microscope))
+        self.use_microscope = not self.use_microscope # switch the bool value
+        self.toggle_pub.publish(Bool(data=self.use_microscope))
 
-        # TODO: need to comment out when figure it out
-        print(f"Microscope view: {self.use_microscope}")
+    def add_new_file_path(self):
+        new_path, ok = QInputDialog.getText(self, "New File Path", "Enter new file path:")
+        if not ok or not new_path.strip():
+            return
+
+        if not os.path.exists(new_path):
+            print("Invalid file path entered!")
+            return
+        
+        if new_path not in self.saved_paths:
+            self.saved_paths.append(new_path)
+            self.path_dropdown.addItem(new_path)
+
+        self.path_dropdown.setCurrentText(new_path)
+        self.save_default_path(new_path)
+
+    def load_default_path(self):
+        if os.path.exists(self.config_file):
+            with open(self.config_file, 'r') as f:
+                config = yaml.safe_load(f)
+                return config.get('last_path', '')
+        return
+
+    def save_default_path(self, path):
+        with open(self.config_file, 'w') as f:
+            yaml.dump({'last_path': path}, f)
 
 
 

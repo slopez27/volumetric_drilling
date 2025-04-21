@@ -23,42 +23,23 @@
 
 #version 120
 
-// in vec2 gl_TexCoord;
-
 // UNIFORMS
-// A texture containing the left and right images from the microscope.
 uniform sampler2D rosImageTexture;
-// Texture containing the simulation assisted navigation view.
 uniform sampler2D frameBufferTexture;
-// distance of small window from the center. Value between [0.0, 0.2]
+
 uniform float small_window_disparity = 0.1;
 uniform int window_width = 1920;
 uniform int window_height = 1043;
 
-
-// CONFIG PARAMETERS
-// TODO: I got the ok to change this so can control x and y!!!
-// NOTE: changing this to uniform
 uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
-// uniform float small_window_x_pos = 0.1;
+uniform int toggle_sim_microscope; // 0 = sim small, microscope big, 1 = sim big, microscope
 
-// NOTE: Commenting this section out just for now
-// // Adjust the small window's width to ensure it is always square
-// float aspect_ratio = float(window_width) / float(window_height);
-// float small_window_width = small_window_height / aspect_ratio;
 
-// // adding clamped position
-// vec2 clamped_pos = clamp_small_window_y(small_window_y_pos, small_window_height);
-
-// vec2 rect_size = vec2(small_window_width, small_window_height);
-// vec2 left_small_window_pos = vec2(0.5 - rect_size.x - small_window_disparity, clamped_pos.y);
-// vec2 right_small_window_pos = vec2(small_window_disparity, clamped_pos.y);
-
-// OTHER PARAMETERS
 float offset;
 vec2 small_window_pos;
 
+// HELPER FUNCTIONS
 float remap(float t, float a, float b, float c, float d)
 {
     return c + (t-a)/(b-a) * (d-c);
@@ -80,13 +61,6 @@ vec2 clamp_small_window_y(float y, float height)
     return vec2(0.0, clamped_y);
 }
 
-// vec2 clamp_small_window_x(float x, float width, float disparity)
-// {
-//     float max_x = 1.0 - (2.0 * width + disparity);
-//     float clamped_x = clamp(x, 0.0, max_x);
-//     return vec2(clamped_x, 0.0);
-// }
-// NOTE: adding this in for now to see if this fixes the overlap issue
 vec2 clamp_left_window_x(float x, float width, float disparity) {
     float max_x = 0.5 - width - (disparity / 2.0);
     float clamped_x = clamp(x, 0.0, max_x);
@@ -102,21 +76,15 @@ vec2 clamp_right_window_x(float x, float width, float disparity) {
 
 void main()
 {
-    // output_loc is the fragment location on screen from [0,1]x[0,1]
-    vec2 output_loc = gl_TexCoord[0].xy;
+    vec2 output_loc = gl_FragCoord.xy / vec2(window_width, window_height);
 
-    // NOTE: seeing if better if I have it in main
     float aspect_ratio = float(window_width) / float(window_height);
     float small_window_width = small_window_height / aspect_ratio;
     vec2 rect_size = vec2(small_window_width, small_window_height);
 
-    float min_disparity = small_window_width/2.0; // TODO: can't exceed screen halves
+    float min_disparity = small_window_width / 2.0;
     float max_disparity = 0.5 - min_disparity;
     float clamped_disparity = clamp(small_window_disparity, min_disparity, max_disparity);
-
-
-    // float clamped_disparity = clamp(small_window_disparity, 0.0, 1.0 - 2.0 * small_window_width);
-
 
     vec2 clamped_y = clamp_small_window_y(small_window_y_pos, small_window_height);
 
@@ -124,41 +92,6 @@ void main()
     float center_x_right = 0.5 + clamped_disparity;
     vec2 left_small_window_pos = vec2(center_x_left - small_window_width / 2.0, clamped_y.y);
     vec2 right_small_window_pos = vec2(center_x_right - small_window_width / 2.0, clamped_y.y);
-    // vec2 clamped_pos = clamp_small_window_y(small_window_y_pos, small_window_height);
-    // vec2 clamped_x_pos = clamp_small_window_x(small_window_x_pos, small_window_width, clamped_disparity);
-    // vec2 left_small_window_pos = vec2(clamped_x_pos.x, clamped_pos.y);
-    // vec2 right_small_window_pos = vec2(clamped_x_pos.x + rect_size.x + clamped_disparity, clamped_pos.y);
-
-
-    // if (output_loc[0] <= 0.5)
-    // {
-    //     offset = 0.0;
-    //     small_window_pos = left_small_window_pos;
-    // }
-    // else
-    // {
-    //     offset = 0.5;
-    //     small_window_pos = right_small_window_pos;
-    // }
-
-    // // Rectangle boundaries in normalized device coordinates
-    // vec2 rectMin = small_window_pos;
-    // vec2 rectMax = small_window_pos + rect_size;
-    // rectMin.x += offset;
-    // rectMax.x += offset;
-
-    // if (output_loc.x >= rectMin.x && output_loc.x <= rectMax.x &&
-    //     output_loc.y >= rectMin.y && output_loc.y <= rectMax.y)
-    // {
-    //     // gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); // Green color
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMin, rectMax);
-    //     // gl_FragColor = texture2D(frameBufferTexture, output_loc2); 
-    //     gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), texture2D(rosImageTexture, output_loc), 0.3);
-    // }
-    // else
-    // {
-    //     gl_FragColor = texture2D(rosImageTexture, output_loc); 
-    // }
 
     // LEFT WINDOW
     vec2 rectMinL = left_small_window_pos;
@@ -168,27 +101,108 @@ void main()
     vec2 rectMinR = right_small_window_pos;
     vec2 rectMaxR = rectMinR + rect_size;
 
-    vec4 baseColor = texture2D(rosImageTexture, output_loc);
+    vec4 baseColor = (toggle_sim_microscope == 1)
+        ? texture2D(rosImageTexture, output_loc)
+        : texture2D(frameBufferTexture, output_loc);
 
-    // Check left window
-    if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
-        output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
-    {
-        vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
-        gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
-    }
-    // Check right window
-    else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
-            output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
-    {
-        vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
-        gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
-    }
-    else
-    {
+    vec4 overlayColor;
+
+    bool inLeftWindow = output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x && output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y;
+
+    bool inRightWindow = output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x && output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y;
+
+    if (inLeftWindow || inRightWindow) {
+        vec2 output_loc2 = inLeftWindow
+            ? remap_little_window(output_loc, rectMinL, rectMaxL)
+            : remap_little_window(output_loc, rectMinR, rectMaxR);
+
+        overlayColor = (toggle_sim_microscope == 1)
+            ? texture2D(frameBufferTexture, output_loc2)
+            : texture2D(rosImageTexture, output_loc2);
+        
+        gl_FragColor = mix(overlayColor, baseColor, 0.3);
+    } else {
         gl_FragColor = baseColor;
     }
 
+    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
+    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
+    // {
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
+    //     vec4 overlayColor = (toggle_sim_microscope == 1)
+    //         ? texture2D(rosBufferTexture, output_loc2)
+    //         : texture2D(frameImageTexture, output_loc2);
+    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
+    // }
+    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
+    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
+    // {
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
+    //     vec4 overlayColor = (toggle_sim_microscope == 1)
+    //         ? texture2D(rosBufferTexture, output_loc2)
+    //         : texture2D(frameImageTexture, output_loc2);
+    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
+    // }
+    // else
+    // {
+    //     gl_FragColor = baseColor;
+    // }
 
+
+    // // Check left window
+    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
+    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
+    // {
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
+    //     gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
+    // }
+    // // Check right window
+    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
+    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
+    // {
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
+    //     gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
+    // }
+    // else
+    // {
+    //     gl_FragColor = baseColor;
+    // }
+
+    // // Check left window
+    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
+    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
+    // {
+    //     vec4 baseColor, overlayColor;
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
+
+    //     if (toggle_sim_microscope == 1) {
+    //         baseColor = texture2D(rosImageTexture, output_loc);
+    //         overlayColor = texture2D(frameBufferTexture, output_loc2);
+    //     } else {
+    //         baseColor = texture2D(frameImageTexture, output_loc);
+    //         overlayColor = texture2D(rosBufferTexture, output_loc2);
+    //     }
+    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
+    // }
+    // // Check right window
+    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
+    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
+    // {   
+    //     vec4 baseColor, overlayColor;
+    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
+    //     if (toggle_sim_microscope == 1) {
+    //         baseColor = texture2D(rosImageTexture, output_loc);
+    //         overlayColor = texture2D(frameBufferTexture, output_loc2);
+    //     } else {
+    //         baseColor = texture2D(frameBufferTexture, output_loc);
+    //         overlayColor = texture2D(rosImageTexture, output_loc2);
+    //     }
+    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
+    // }
+    // else
+    // {
+    //     gl_FragColor = baseColor;
+    // }
    
 }
+

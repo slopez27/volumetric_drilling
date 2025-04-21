@@ -75,6 +75,8 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
 
     window_disparity_sub = ros_node_handle->subscribe("/sim_assisted_nav/small_window_disparity", 2, &afCameraHMD::window_disparity_callback, this);
 
+    toggle_sim_microscope_sub = ros_node_handle->subscribe("/sim_assisted_nav/toggle_sim_microscope", 2, &afCameraHMD::toggle_sim_microscope_callback, this);
+
     // initializing the new ones that I added
     window_size_sub = ros_node_handle->subscribe("/sim_assisted_nav/small_window_size", 2, &afCameraHMD::window_size_callback, this);
     window_location_sub = ros_node_handle->subscribe("/sim_assisted_nav/window_location", 2, &afCameraHMD::window_location_callback, this);
@@ -151,7 +153,8 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     {
         throw runtime_error("Frame buffer of m_camera should be initilized in the multiview_panels plugin");
     }
-    m_quadMesh->m_metallicTexture = m_camera->m_frameBuffer->m_imageBuffer;
+    m_quadMesh->m_metallicTexture = m_frameBuffer->m_imageBuffer;
+    // m_quadMesh->m_metallicTexture = m_camera->m_frameBuffer->m_imageBuffer;
 
     m_quadMesh->setUseTexture(true);
 
@@ -222,7 +225,8 @@ void afCameraHMD::updateHMDParams()
     glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
 
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, m_camera->m_frameBuffer->m_imageBuffer->getTextureId());
+    glBindTexture(GL_TEXTURE_2D, m_frameBuffer->m_imageBuffer->getTextureId());
+    // glBindTexture(GL_TEXTURE_2D, m_camera->m_frameBuffer->m_imageBuffer->getTextureId());
     glUniform1i(glGetUniformLocation(id, "frameBufferTexture"), 2);
 
     // m_quadMesh->m_texture which points m_rosImageTexture gets automatically assigned to texture unit 0.
@@ -240,6 +244,9 @@ void afCameraHMD::updateHMDParams()
     glUniform1f(glGetUniformLocation(id, "small_window_y_pos"), small_window_y_pos);
     glUniform1f(glGetUniformLocation(id, "small_window_height"), small_window_height);
     glUniform1f(glGetUniformLocation(id, "small_window_x_pos"), small_window_x_pos);
+    glUniform1i(glGetUniformLocation(id, "toggle_sim_microscope"), toggle_sim_microscope ? 1 : 0);
+    std::cout << "[DEBUG] toggle_sim_microscope = " << (toggle_sim_microscope ? 1 : 0) << std::endl;
+    
 
 }
 
@@ -474,7 +481,8 @@ void afCameraHMD::update_ros_textures_for_headset()
     if (!debug_saved && !concat_img_ptr->image.empty())
     {
         std::cout << "[DEBUG] Saving debug image to /tmp/debug_concat_image.png\n";
-        bool success = cv::imwrite("/tmp/debug_concat_image.png", concat_img_ptr->image);
+        // bool success = cv::imwrite("/tmp/debug_concat_image.png", concat_img_ptr->image);
+        bool success = cv::imwrite("/home/samvl7/SAINT/volumetric_drilling/plugin/sim_assisted_nav/shaders/debug_concat_image.png", concat_img_ptr->image);
         if (success) {
             std::cout << "[DEBUG] Image saved successfully.\n";
         } else {
@@ -530,4 +538,11 @@ void afCameraHMD::window_location_callback(const geometry_msgs::Point::ConstPtr 
 void afCameraHMD::window_size_callback(const geometry_msgs::Point::ConstPtr &msg) {
     small_window_height = msg->x;
     updateHMDParams();
+}
+
+void afCameraHMD::toggle_sim_microscope_callback(const std_msgs::Bool &msg) {
+    toggle_sim_microscope = msg.data ? 1: 0;
+    std::cout << "[TOGGLE] Received toggle_sim_microscope = " << toggle_sim_microscope << std::endl;
+    updateHMDParams();
+
 }

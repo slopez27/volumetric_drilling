@@ -76,6 +76,7 @@ public:
     // ROS topics Samanta is adding
     ros::Subscriber window_size_sub; // rostopoc for the window size
     ros::Subscriber window_location_sub; // rostopic for the window location
+    ros::Subscriber toggle_sim_microscope_sub; // rostopic for toggling between simulation and microscope location
 
     void left_img_callback(const sensor_msgs::ImageConstPtr &msg);
     void right_img_callback(const sensor_msgs::ImageConstPtr &msg);
@@ -88,6 +89,7 @@ public:
     // callbacks Samanta is adding
     void window_location_callback(const geometry_msgs::Point::ConstPtr &msg);
     void window_size_callback(const geometry_msgs::Point::ConstPtr &msg);
+    void toggle_sim_microscope_callback(const std_msgs::Bool &msg);
 
 
     void update_ros_textures_for_headset();
@@ -105,6 +107,8 @@ public:
     float small_window_x_pos = 0.1;
     // New member variable for size
     float small_window_height = 0.38f;
+
+    int toggle_sim_microscope = 0;
 
     void assignGLFWCallbacks();
     void windowSizeCallback(GLFWwindow *window_ptr, int width, int height);
