@@ -110,11 +110,8 @@ void main()
             : (output_loc.x - 0.5) * 2;
 
         baseColor = texture2D(frameBufferTexture, baseCoord);
-    } else {
-        baseCoord.x = (output_loc.x < 0.5)
-            ? output_loc.x * 0.5  
-            : 0.5 + (output_loc.x - 0.5) * 0.5; 
-
+    } 
+    else {
         baseColor = texture2D(rosImageTexture, baseCoord);
     }
 
