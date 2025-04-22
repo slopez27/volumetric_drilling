@@ -147,14 +147,13 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     // the texture from the m_imageBuffer to metallicTexture.
 
     m_quadMesh->m_texture = m_rosImageTexture;
-    // m_quadMesh->m_metallicTexture = m_frameBuffer->m_imageBuffer;
 
     if (m_camera->m_frameBuffer->m_imageBuffer == nullptr)
     {
         throw runtime_error("Frame buffer of m_camera should be initilized in the multiview_panels plugin");
     }
-    m_quadMesh->m_metallicTexture = m_frameBuffer->m_imageBuffer;
-    // m_quadMesh->m_metallicTexture = m_camera->m_frameBuffer->m_imageBuffer;
+    // m_quadMesh->m_metallicTexture = m_frameBuffer->m_imageBuffer;
+    m_quadMesh->m_metallicTexture = m_camera->m_frameBuffer->m_imageBuffer;
 
     m_quadMesh->setUseTexture(true);
 
