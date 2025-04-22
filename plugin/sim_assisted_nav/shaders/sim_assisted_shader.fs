@@ -115,6 +115,13 @@ void main()
         vec2 output_loc2 = inLeftWindow
             ? remap_little_window(output_loc, rectMinL, rectMaxL)
             : remap_little_window(output_loc, rectMinR, rectMaxR);
+        
+        // only sending half of the whole texture
+        if (inLeftWindow) {
+        output_loc2.x = output_loc2.x * 0.5;
+        } else {
+            output_loc2.x = 0.5 + output_loc2.x * 0.5;
+        }
 
         overlayColor = (toggle_sim_microscope == 1)
             ? texture2D(frameBufferTexture, output_loc2)
@@ -124,85 +131,5 @@ void main()
     } else {
         gl_FragColor = baseColor;
     }
-
-    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
-    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
-    // {
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
-    //     vec4 overlayColor = (toggle_sim_microscope == 1)
-    //         ? texture2D(rosBufferTexture, output_loc2)
-    //         : texture2D(frameImageTexture, output_loc2);
-    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
-    // }
-    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
-    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
-    // {
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
-    //     vec4 overlayColor = (toggle_sim_microscope == 1)
-    //         ? texture2D(rosBufferTexture, output_loc2)
-    //         : texture2D(frameImageTexture, output_loc2);
-    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
-    // }
-    // else
-    // {
-    //     gl_FragColor = baseColor;
-    // }
-
-
-    // // Check left window
-    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
-    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
-    // {
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
-    //     gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
-    // }
-    // // Check right window
-    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
-    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
-    // {
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
-    //     gl_FragColor = mix(texture2D(frameBufferTexture, output_loc2), baseColor, 0.3);
-    // }
-    // else
-    // {
-    //     gl_FragColor = baseColor;
-    // }
-
-    // // Check left window
-    // if (output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x &&
-    //     output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y)
-    // {
-    //     vec4 baseColor, overlayColor;
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinL, rectMaxL);
-
-    //     if (toggle_sim_microscope == 1) {
-    //         baseColor = texture2D(rosImageTexture, output_loc);
-    //         overlayColor = texture2D(frameBufferTexture, output_loc2);
-    //     } else {
-    //         baseColor = texture2D(frameImageTexture, output_loc);
-    //         overlayColor = texture2D(rosBufferTexture, output_loc2);
-    //     }
-    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
-    // }
-    // // Check right window
-    // else if (output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x &&
-    //         output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y)
-    // {   
-    //     vec4 baseColor, overlayColor;
-    //     vec2 output_loc2 = remap_little_window(output_loc, rectMinR, rectMaxR);
-    //     if (toggle_sim_microscope == 1) {
-    //         baseColor = texture2D(rosImageTexture, output_loc);
-    //         overlayColor = texture2D(frameBufferTexture, output_loc2);
-    //     } else {
-    //         baseColor = texture2D(frameBufferTexture, output_loc);
-    //         overlayColor = texture2D(rosImageTexture, output_loc2);
-    //     }
-    //     gl_FragColor = mix(overlayColor, baseColor, 0.3);
-    // }
-    // else
-    // {
-    //     gl_FragColor = baseColor;
-    // }
-   
 }
 
