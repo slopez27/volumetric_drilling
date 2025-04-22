@@ -33,7 +33,7 @@ uniform int window_height = 1043;
 
 uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
-uniform int toggle_sim_microscope; // 0 = sim small, microscope big, 1 = sim big, microscope
+uniform int toggle_sim_microscope; 
 
 
 float offset;
@@ -101,24 +101,19 @@ void main()
     vec2 rectMinR = right_small_window_pos;
     vec2 rectMaxR = rectMinR + rect_size;
 
-    // vec4 baseColor = (toggle_sim_microscope == 1)
-    //     ? texture2D(rosImageTexture, output_loc)
-    //     : texture2D(frameBufferTexture, output_loc);
     vec4 baseColor;
     vec2 baseCoord = output_loc;
 
     if (toggle_sim_microscope == 0) {
-        // Simulation = big → it's mono, so duplicate across both eyes
         baseCoord.x = (output_loc.x < 0.5)
             ? output_loc.x * 2
             : (output_loc.x - 0.5) * 2;
 
         baseColor = texture2D(frameBufferTexture, baseCoord);
     } else {
-        // Microscope = big → it's stereo, use half for each eye
         baseCoord.x = (output_loc.x < 0.5)
-            ? output_loc.x * 0.5              // Left eye → [0.0 → 0.5]
-            : 0.5 + (output_loc.x - 0.5) * 0.5; // Right eye → [0.5 → 1.0]
+            ? output_loc.x * 0.5  
+            : 0.5 + (output_loc.x - 0.5) * 0.5; 
 
         baseColor = texture2D(rosImageTexture, baseCoord);
     }
@@ -135,8 +130,6 @@ void main()
             ? remap_little_window(output_loc, rectMinL, rectMaxL)
             : remap_little_window(output_loc, rectMinR, rectMaxR);
         
-        // only sending half of the whole texture
-        // TODO: need to fix because should only be applying this to microscope
         if (toggle_sim_microscope == 0) {
             output_loc2.x = inLeftWindow
                 ? output_loc2.x * 0.5
