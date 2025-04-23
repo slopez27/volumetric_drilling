@@ -28,12 +28,18 @@ class SimAssistedNavGUI(QWidget):
         self.disparity_pub = rospy.Publisher('/sim_assisted_nav/small_window_disparity', Float32, queue_size=1)
         self.toggle_pub = rospy.Publisher('/sim_assisted_nav/toggle_sim_microscope', Bool, queue_size=1)
         self.blending_pub = rospy.Publisher('/sim_assisted_nav/blending_ratio', Float32, queue_size=1)
+        self.hide_ct_pub = rospy.Publisher('/sim_assisted_nav/hide_ct', Bool, queue_size=1)
 
         # adding button for changing view of microscope or simulation
         # self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
         self.use_microscope = False
         self.toggle_view_button = QPushButton("Toggle View (Sim/Microscope)")
-        self.toggle_view_button.clicked.connect(self.toggle_view)       
+        self.toggle_view_button.clicked.connect(self.toggle_view)     
+
+        # initialize button for hiding CT slices
+        self.hide_ct = False
+        self.hide_ct_button = QPushButton("Hide CT Views")
+        self.hide_ct_button.clicked.connect(self.hide_ct_view)  
 
         # initialize slider for window size
         self.size_slider = QSlider(Qt.Horizontal)
@@ -95,6 +101,8 @@ class SimAssistedNavGUI(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Switch Main View (Simulation/ Microscope)"))
         layout.addWidget(self.toggle_view_button)
+        layout.addWidget(QLabel("Hide CT Views"))
+        layout.addWidget(self.hide_ct_button)
         layout.addWidget(QLabel("Window Size"))
         layout.addWidget(self.size_slider)
         layout.addWidget(QLabel("Window Disparity"))
@@ -300,6 +308,10 @@ class SimAssistedNavGUI(QWidget):
     def toggle_view(self):
         self.use_microscope = not self.use_microscope # switch the bool value
         self.toggle_pub.publish(Bool(data=self.use_microscope))
+
+    def hide_ct_view(self):
+        self.hide_ct = not self.hide_ct # switch the bool value
+        self.hide_ct_pub.publish(Bool(data=self.hide_ct))
 
     def add_new_file_path(self):
         new_path, ok = QInputDialog.getText(self, "New File Path", "Enter new file path:")

@@ -35,7 +35,7 @@ uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
 uniform int toggle_sim_microscope; 
 uniform float blending_ratio = 0.3;
-
+uniform int hide_ct;
 
 float offset;
 vec2 small_window_pos;
@@ -106,13 +106,21 @@ void main()
     vec2 baseCoord = output_loc;
 
     if (toggle_sim_microscope == 0) {
-        baseCoord.x = (output_loc.x < 0.5)
-            ? output_loc.x * 2
-            : (output_loc.x - 0.5) * 2;
+        if (hide_ct == 1) {
+            float localX = (output_loc.x < 0.5)
+                ? output_loc.x * 2.0
+                : (output_loc.x - 0.5) * 2.0;
+
+            float localY = output_loc.y;
+            baseCoord = vec2(0.5 + 0.5 * localX, 0.5 + 0.5 * localY);
+        } else {
+            baseCoord.x = (output_loc.x < 0.5)
+                ? output_loc.x * 2.0
+                : (output_loc.x - 0.5) * 2.0;
+        }
 
         baseColor = texture2D(frameBufferTexture, baseCoord);
-    } 
-    else {
+    } else {
         baseColor = texture2D(rosImageTexture, baseCoord);
     }
 
@@ -132,6 +140,13 @@ void main()
             output_loc2.x = inLeftWindow
                 ? output_loc2.x * 0.5
                 : 0.5 + output_loc2.x * 0.5;
+            
+        } else {
+            if (hide_ct == 1) {
+                float localX = output_loc2.x;
+                float localY = output_loc2.y;
+                output_loc2 = vec2(0.5 + 0.5 * localX, 0.5 + 0.5 * localY);
+            }
         }
 
         overlayColor = (toggle_sim_microscope == 1)
