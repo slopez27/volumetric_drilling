@@ -77,6 +77,7 @@ public:
     ros::Subscriber window_size_sub; // rostopoc for the window size
     ros::Subscriber window_location_sub; // rostopic for the window location
     ros::Subscriber toggle_sim_microscope_sub; // rostopic for toggling between simulation and microscope location
+    ros::Subscriber blending_ratio_sub;
 
     void left_img_callback(const sensor_msgs::ImageConstPtr &msg);
     void right_img_callback(const sensor_msgs::ImageConstPtr &msg);
@@ -90,6 +91,7 @@ public:
     void window_location_callback(const geometry_msgs::Point::ConstPtr &msg);
     void window_size_callback(const geometry_msgs::Point::ConstPtr &msg);
     void toggle_sim_microscope_callback(const std_msgs::Bool &msg);
+    void blending_ratio_callback(const std_msgs::Float32 &msg);
 
 
     void update_ros_textures_for_headset();
@@ -109,6 +111,7 @@ public:
     float small_window_height = 0.38f;
 
     int toggle_sim_microscope = 0;
+    float blending_ratio = 0.3f;
 
     void assignGLFWCallbacks();
     void windowSizeCallback(GLFWwindow *window_ptr, int width, int height);

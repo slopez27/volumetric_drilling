@@ -34,6 +34,7 @@ uniform int window_height = 1043;
 uniform float small_window_y_pos = 0.60;
 uniform float small_window_height = 0.38;
 uniform int toggle_sim_microscope; 
+uniform float blending_ratio = 0.3;
 
 
 float offset;
@@ -137,7 +138,7 @@ void main()
             ? texture2D(frameBufferTexture, output_loc2)
             : texture2D(rosImageTexture, output_loc2);
         
-        gl_FragColor = mix(overlayColor, baseColor, 0.3);
+        gl_FragColor = mix(overlayColor, baseColor, blending_ratio);
     } else {
         gl_FragColor = baseColor;
     }

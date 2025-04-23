@@ -80,6 +80,7 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     // initializing the new ones that I added
     window_size_sub = ros_node_handle->subscribe("/sim_assisted_nav/small_window_size", 2, &afCameraHMD::window_size_callback, this);
     window_location_sub = ros_node_handle->subscribe("/sim_assisted_nav/window_location", 2, &afCameraHMD::window_location_callback, this);
+    blending_ratio_sub = ros_node_handle->subscribe("/sim_assisted_nav/blending_ratio", 2, &afCameraHMD::blending_ratio_callback, this);
 
     m_camera->setOverrideRendering(true);
 
@@ -244,7 +245,9 @@ void afCameraHMD::updateHMDParams()
     glUniform1f(glGetUniformLocation(id, "small_window_height"), small_window_height);
     glUniform1f(glGetUniformLocation(id, "small_window_x_pos"), small_window_x_pos);
     glUniform1i(glGetUniformLocation(id, "toggle_sim_microscope"), toggle_sim_microscope ? 1 : 0);
-    std::cout << "[DEBUG] toggle_sim_microscope = " << (toggle_sim_microscope ? 1 : 0) << std::endl;
+    // std::cout << "[DEBUG] toggle_sim_microscope = " << (toggle_sim_microscope ? 1 : 0) << std::endl;
+    glUniform1f(glGetUniformLocation(id, "blending_ratio"), blending_ratio);
+    std::cout << "[DEBUG] blending_ratio = " << blending_ratio << std::endl;
     
 
 }
@@ -544,4 +547,10 @@ void afCameraHMD::toggle_sim_microscope_callback(const std_msgs::Bool &msg) {
     std::cout << "[TOGGLE] Received toggle_sim_microscope = " << toggle_sim_microscope << std::endl;
     updateHMDParams();
 
+}
+
+void afCameraHMD::blending_ratio_callback(const std_msgs::Float32 &msg) {
+    blending_ratio = msg.data;
+    std::cout << "[BLENDING] Received blending_ratio = " << blending_ratio << std::endl;
+    updateHMDParams();
 }

@@ -27,6 +27,7 @@ class SimAssistedNavGUI(QWidget):
         self.location_pub = rospy.Publisher('/sim_assisted_nav/window_location', Point, queue_size=1)
         self.disparity_pub = rospy.Publisher('/sim_assisted_nav/small_window_disparity', Float32, queue_size=1)
         self.toggle_pub = rospy.Publisher('/sim_assisted_nav/toggle_sim_microscope', Bool, queue_size=1)
+        self.blending_pub = rospy.Publisher('/sim_assisted_nav/blending_ratio', Float32, queue_size=1)
 
         # adding button for changing view of microscope or simulation
         # self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
@@ -48,11 +49,19 @@ class SimAssistedNavGUI(QWidget):
         self.disparity_slider.setValue(10)
         self.disparity_slider.valueChanged.connect(self.update_disparity)
 
+        # initialize slider for y movement
         self.y_slider = QSlider(Qt.Horizontal)
         self.y_slider.setMinimum(0)
         self.y_slider.setMaximum(100)
         self.y_slider.setValue(int(self.last_location.y * 100))
         self.y_slider.valueChanged.connect(self.update_manual_location)
+
+        # initialize slider for blending ratio
+        self.blending_slider = QSlider(Qt.Horizontal)
+        self.blending_slider.setMinimum(0)
+        self.blending_slider.setMaximum(100)
+        self.blending_slider.setValue(30)
+        self.blending_slider.valueChanged.connect(self.update_blending_ratio)
 
 
         # save and load configuration buttons
@@ -92,6 +101,8 @@ class SimAssistedNavGUI(QWidget):
         layout.addWidget(self.disparity_slider)
         layout.addWidget(QLabel("Adjust Y Location (Bottom–Top)"))
         layout.addWidget(self.y_slider)
+        layout.addWidget(QLabel("Blending Ratio"))
+        layout.addWidget(self.blending_slider)
         layout.addWidget(self.save_button)
         layout.addWidget(self.load_button)
         layout.addWidget(QLabel("User"))
@@ -137,7 +148,9 @@ class SimAssistedNavGUI(QWidget):
         self.location_pub.publish(msg)
         self.last_location = msg  
 
-
+    def update_blending_ratio(self, value):
+        blending = value / 100.0
+        self.blending_pub.publish(Float32(data=blending))
     
     def update_disparity(self, value):
         disparity = value / 100.0
