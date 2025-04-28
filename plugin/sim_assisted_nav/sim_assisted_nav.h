@@ -45,6 +45,7 @@
 #include <afFramework.h>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
+#include <mutex>
 
 using namespace std;
 using namespace ambf;
@@ -99,10 +100,14 @@ public:
     void update_ros_textures_for_headset();
     cv_bridge::CvImagePtr left_img_ptr = nullptr;
     cv_bridge::CvImagePtr right_img_ptr = nullptr;
-    cv_bridge::CvImagePtr concat_img_ptr = nullptr;
+    // cv_bridge::CvImagePtr concat_img_ptr = nullptr;
     int clipsize = 0.3;
 
-    cTexture2dPtr m_rosImageTexture;
+    // cTexture2dPtr m_rosImageTexture;
+    cTexture2dPtr m_microscopeViewLeft;
+    cTexture2dPtr m_microscopeViewRight;
+    // cTexture2dPtr m_simulationViewTexture; // sim view with CT
+    // cTexture2dPtr m_simulationViewNoCTTexture; // sim view without CT
 
     // Shader uniform variables
     float window_disparity = 0.1;
@@ -128,6 +133,12 @@ protected:
     int m_height;
     int m_alias_scaling;
     cShaderProgramPtr m_shaderPgm;
+    std::mutex textureUpdateMutex; // need to lock wherever write new images or read and upload images to texture
+    
+    // image readiness trackers
+    bool newLeftImage = false;
+    bool newRightImage = false;
+
 };
 
 struct StereoRosCameraWrapper

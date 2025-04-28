@@ -66,18 +66,12 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     assignGLFWCallbacks();
 
     create_stereo_cam_info_from_yaml(m_camera->getName(), a_objectAttribs);
-    // Ros subscribers
-    // left_sub = ros_node_handle->subscribe(stereo_cam_info->rostopic_left, 2, &afCameraHMD::left_img_callback, this);
-    // right_sub = ros_node_handle->subscribe(stereo_cam_info->rostopic_right, 2, &afCameraHMD::right_img_callback, this);
 
+    // ROS subscribers
     left_sub = ros_node_handle->subscribe(stereo_cam_info->rostopic_left, 2, &afCameraHMD::left_compressed_img_callback, this);
     right_sub = ros_node_handle->subscribe(stereo_cam_info->rostopic_right, 2, &afCameraHMD::right_compressed_img_callback, this);
-
     window_disparity_sub = ros_node_handle->subscribe("/sim_assisted_nav/small_window_disparity", 2, &afCameraHMD::window_disparity_callback, this);
-
     toggle_sim_microscope_sub = ros_node_handle->subscribe("/sim_assisted_nav/toggle_sim_microscope", 2, &afCameraHMD::toggle_sim_microscope_callback, this);
-
-    // initializing the new ones that I added
     window_size_sub = ros_node_handle->subscribe("/sim_assisted_nav/small_window_size", 2, &afCameraHMD::window_size_callback, this);
     window_location_sub = ros_node_handle->subscribe("/sim_assisted_nav/window_location", 2, &afCameraHMD::window_location_callback, this);
     blending_ratio_sub = ros_node_handle->subscribe("/sim_assisted_nav/blending_ratio", 2, &afCameraHMD::blending_ratio_callback, this);
@@ -134,12 +128,25 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     m_quadMesh->m_vertices->setTexCoord(5, 1.0, 1.0, 1.0);
 
     // Variables related to ROS topics
-    concat_img_ptr = boost::make_shared<cv_bridge::CvImage>();
+    // concat_img_ptr = boost::make_shared<cv_bridge::CvImage>();
     left_img_ptr = boost::make_shared<cv_bridge::CvImage>();
     right_img_ptr = boost::make_shared<cv_bridge::CvImage>();
 
     // Textures
-    m_rosImageTexture = cTexture2d::create();
+    // m_rosImageTexture = cTexture2d::create();
+    m_microscopeViewLeft = cTexture2d::create();
+    m_microscopeViewRight = cTexture2d::create();
+
+
+    m_microscopeViewLeft->markForUpdate(); // mark for update
+    m_microscopeViewRight->markForUpdate(); // mark for update
+    
+    // m_simulationViewTexture = cTexture2d::create();
+    // m_simulationViewNoCTTexture = cTexture2d::create();
+
+    // // TODO: double check maybe also a markForUpdate???
+    // m_simulationViewTexture->m_image->allocate(m_width, m_height, GL_RGB, GL_UNSIGNED_BYTE);
+    // m_simulationViewNoCTTexture->m_image->allocate(m_width, m_height, GL_RGB, GL_UNSIGNED_BYTE);
 
     m_quadMesh->computeAllNormals();
 
@@ -148,7 +155,10 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     // For this case the rosImageTexture gets assigned to m_texture and
     // the texture from the m_imageBuffer to metallicTexture.
 
-    m_quadMesh->m_texture = m_rosImageTexture;
+    // m_quadMesh->m_texture = m_rosImageTexture;
+    m_quadMesh->m_texture = m_microscopeViewLeft;
+    m_quadMesh->m_roughnessTexture = m_microscopeViewRight;
+
 
     if (m_camera->m_frameBuffer->m_imageBuffer == nullptr)
     {
@@ -156,6 +166,7 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     }
     // m_quadMesh->m_metallicTexture = m_frameBuffer->m_imageBuffer;
     m_quadMesh->m_metallicTexture = m_camera->m_frameBuffer->m_imageBuffer;
+    // m_quadMesh->roughnessTexture = m_microscopeViewRight; // adding this to see if it is a problem that not passing right view
 
     m_quadMesh->setUseTexture(true);
 
@@ -166,7 +177,11 @@ int afCameraHMD::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObjectAtt
     m_vrWorld->addChild(m_quadMesh);
 
     cerr << "INFO! LOADING VR PLUGIN \n";
-    cout << "JUAN!!!!\n\n\n\n";
+    // cout << "JUAN!!!!\n\n\n\n";
+
+    std::cout << "[AFTER INIT] microscopeViewLeft ID: " << m_microscopeViewLeft->getTextureId() << std::endl;
+    std::cout << "[AFTER INIT] microscopeViewRight ID: " << m_microscopeViewRight->getTextureId() << std::endl;
+
 
     return 1;
 }
@@ -219,21 +234,31 @@ void afCameraHMD::updateHMDParams()
     GLint id = m_shaderPgm->getId();
     //    cerr << "INFO! Shader ID " << id << endl;
     glUseProgram(id);
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, m_rosImageTexture->getTextureId());
+    // glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
 
-    // Need to add the binding!!!... these are no longer automatically assigned!
+    // std::cout << "[DEBUG] microscopeViewLeft Texture ID = " << m_microscopeViewLeft->getTextureId() << std::endl;
+    // std::cout << "[DEBUG] microscopeViewRight Texture ID = " << m_microscopeViewRight->getTextureId() << std::endl;
+    // std::cout << "[DEBUG] frameBufferTexture ID = " << m_frameBuffer->m_imageBuffer->getTextureId() << std::endl;
+
+
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_rosImageTexture->getTextureId());
-    glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
+    glBindTexture(GL_TEXTURE_2D, m_microscopeViewLeft->getTextureId());
+    glUniform1i(glGetUniformLocation(id, "microscopeViewLeft"), 0);
+    // std::cout << "[DEBUG] id for microscopeViewLeft = " << id << std::endl;
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_microscopeViewRight->getTextureId());
+    glUniform1i(glGetUniformLocation(id, "microscopeViewRight"), 3);
+    // std::cout << "[DEBUG] id for microscopeViewRight = " << id << std::endl;
+
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, m_frameBuffer->m_imageBuffer->getTextureId());
     // glBindTexture(GL_TEXTURE_2D, m_camera->m_frameBuffer->m_imageBuffer->getTextureId());
     glUniform1i(glGetUniformLocation(id, "frameBufferTexture"), 2);
-
-    // m_quadMesh->m_texture which points m_rosImageTexture gets automatically assigned to texture unit 0.
-    // glUniform1i(glGetUniformLocation(id, "rosImageTexture"), 0);
-    // m_quadMesh->m_metallic which points to a frameBuffer gets assigned to texture unit 2.
-    // glUniform1i(glGetUniformLocation(id, "frameBufferTexture"), 2);
+    // std::cout << "[DEBUG] id for frameBufferTexture = " << id << std::endl;
 
     // Additional parameters
     glUniform1f(glGetUniformLocation(id, "small_window_disparity"), window_disparity);
@@ -250,7 +275,7 @@ void afCameraHMD::updateHMDParams()
     glUniform1f(glGetUniformLocation(id, "blending_ratio"), blending_ratio);
     // std::cout << "[DEBUG] blending_ratio = " << blending_ratio << std::endl;
     glUniform1i(glGetUniformLocation(id, "hide_ct"), hide_ct ? 1 : 0);
-    std::cout << "[DEBUG] hide_ct = " << (hide_ct ? 1 : 0) << std::endl;
+    // std::cout << "[DEBUG] hide_ct = " << (hide_ct ? 1 : 0) << std::endl;
     
 
 }
@@ -283,7 +308,7 @@ void afCameraHMD::create_stereo_cam_info_from_yaml(string cam_name, const afBase
     YAML::Node plugin_config = specificationDataNode["sim_assisted_nav_plugin_config"];
     
     // NOTE: adding this to debug check
-    std::cout << "[DEBUG] YAML loaded - left topic: " << plugin_config["left_rostopic"] << std::endl;
+    // std::cout << "[DEBUG] YAML loaded - left topic: " << plugin_config["left_rostopic"] << std::endl;
 
     if (plugin_config.IsDefined())
     {
@@ -321,6 +346,7 @@ void afCameraHMD::create_stereo_cam_info_from_yaml(string cam_name, const afBase
 
 void afCameraHMD::left_compressed_img_callback(const sensor_msgs::CompressedImageConstPtr &msg)
 {
+    std::lock_guard<std::mutex> lock(textureUpdateMutex);
     try
     {
         cv::Mat image = cv::imdecode(msg->data, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
@@ -329,6 +355,9 @@ void afCameraHMD::left_compressed_img_callback(const sensor_msgs::CompressedImag
         {
             left_img_ptr->image = image;
             left_img_ptr->encoding = sensor_msgs::image_encodings::BGR8;
+            newLeftImage = true;
+            // temporary debugging
+            // std::cout << "[ROS CALLBACK] Received LEFT image: " << msg->data.size() << " bytes" << std::endl;
         }
         else
         {
@@ -344,6 +373,7 @@ void afCameraHMD::left_compressed_img_callback(const sensor_msgs::CompressedImag
 }
 void afCameraHMD::right_compressed_img_callback(const sensor_msgs::CompressedImagePtr &msg)
 {
+    std::lock_guard<std::mutex> lock(textureUpdateMutex);
     try
     {
         cv::Mat image = cv::imdecode(msg->data, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
@@ -352,6 +382,9 @@ void afCameraHMD::right_compressed_img_callback(const sensor_msgs::CompressedIma
         {
             right_img_ptr->image = image;
             right_img_ptr->encoding = sensor_msgs::image_encodings::BGR8;
+            newRightImage = true;
+            // temporary debugging
+            // std::cout << "[ROS CALLBACK] Received RIGHT image: " << msg->data.size() << " bytes" << std::endl;
         }
         else
         {
@@ -417,6 +450,18 @@ void afCameraHMD::right_compressed_img_callback(const sensor_msgs::CompressedIma
  */
 void afCameraHMD::update_ros_textures_for_headset()
 {
+    std::lock_guard<std::mutex> lock(textureUpdateMutex);
+    cRenderOptions renderOptions;
+
+    // Testing to see if only updating when both images are ready gets rid of flickering
+    if (!(newLeftImage && newRightImage)) {
+        return;
+    }
+
+    // reset image tracker status
+    newLeftImage = false;
+    newRightImage = false;
+
     // Return if ros images are not initialized.
     if (left_img_ptr == nullptr || right_img_ptr == nullptr)
     {
@@ -445,56 +490,93 @@ void afCameraHMD::update_ros_textures_for_headset()
     right_for_process->image = right_img_ptr->image.clone();
 
     // Process ros images if received left and right.
-    cv::hconcat(left_for_process->image, right_for_process->image, concat_img_ptr->image);
-    cv::flip(concat_img_ptr->image, concat_img_ptr->image, 0);
+    // cv::hconcat(left_for_process->image, right_for_process->image, concat_img_ptr->image);
+    // cv::flip(concat_img_ptr->image, concat_img_ptr->image, 0);
 
-    if (stereo_cam_info->convert_from_RGB2BGR)
-    {
-        // This is required for zed mini.
-        cv::cvtColor(concat_img_ptr->image, concat_img_ptr->image, cv::COLOR_RGB2BGR);
-    }
+    // if (stereo_cam_info->convert_from_RGB2BGR)
+    // {
+    //     // This is required for zed mini.
+    //     cv::cvtColor(concat_img_ptr->image, concat_img_ptr->image, cv::COLOR_RGB2BGR);
+    // }
 
     // Initialize chai ROS texture.
-    int ros_image_size = concat_img_ptr->image.cols * concat_img_ptr->image.rows * concat_img_ptr->image.elemSize();
-    int texture_image_size = m_rosImageTexture->m_image->getWidth() * m_rosImageTexture->m_image->getHeight() * m_rosImageTexture->m_image->getBytesPerPixel();
+    // get image sizes for left and right of microscope views
+    int microscope_image_left_size = left_img_ptr->image.cols * left_img_ptr->image.rows * left_img_ptr->image.elemSize();
+    int microscope_image_right_size = right_img_ptr->image.cols * right_img_ptr->image.rows * right_img_ptr->image.elemSize();
 
-    if (ros_image_size != texture_image_size)
-    {
-        cout << "INITILIZE rosImageTexture" << endl;
-        m_rosImageTexture->m_image->erase();
+    // get texture sizes for left and right views for microscope
+    int texture_image_left_size = m_microscopeViewLeft->m_image->getWidth() * m_microscopeViewLeft->m_image->getHeight() * m_microscopeViewLeft->m_image->getBytesPerPixel();
+    int texture_image_right_size = m_microscopeViewRight->m_image->getWidth() * m_microscopeViewRight->m_image->getHeight() * m_microscopeViewRight->m_image->getBytesPerPixel();
 
-        // Original implementation in Xinhao's plugin
-        // m_rosImageTexture->m_image->allocate(cv_ptr->image.cols, cv_ptr->image.rows, getImageFormat(cv_ptr->encoding), getImageType(cv_ptr->encoding));
+    // OLD CODE BELOW
+    // int ros_image_size = concat_img_ptr->image.cols * concat_img_ptr->image.rows * concat_img_ptr->image.elemSize();
+    // int texture_image_size = m_rosImageTexture->m_image->getWidth() * m_rosImageTexture->m_image->getHeight() * m_rosImageTexture->m_image->getBytesPerPixel();
 
-        m_rosImageTexture->m_image->allocate(concat_img_ptr->image.cols, concat_img_ptr->image.rows, stereo_cam_info->pixel_format_gl, GL_UNSIGNED_BYTE);
-        m_rosImageTexture->m_image->setData(concat_img_ptr->image.data, ros_image_size);
+    if (microscope_image_left_size != texture_image_left_size || microscope_image_right_size != texture_image_right_size) {
+        cout << "INITIALIZE microscopeViewLeft & microscopeViewRight" << endl;
+        m_microscopeViewLeft->m_image->erase();
+        m_microscopeViewRight->m_image->erase();
 
-        // Only for debuggin purposes
-        // m_rosImageTexture->saveToFile("rosImageTexture_juan.png");
+        m_microscopeViewLeft->m_image->allocate(left_img_ptr->image.cols, left_img_ptr->image.rows, stereo_cam_info->pixel_format_gl, GL_UNSIGNED_BYTE);
+        m_microscopeViewRight->m_image->allocate(right_img_ptr->image.cols, right_img_ptr->image.rows, stereo_cam_info->pixel_format_gl, GL_UNSIGNED_BYTE);
+
+        m_microscopeViewLeft->m_image->setData(left_img_ptr->image.data, microscope_image_left_size);
+        m_microscopeViewRight->m_image->setData(right_img_ptr->image.data, microscope_image_right_size);
+        
+        m_microscopeViewLeft->markForUpdate();
+        m_microscopeViewLeft->renderInitialize(renderOptions);
+
+        m_microscopeViewRight->markForUpdate();
+        m_microscopeViewRight->renderInitialize(renderOptions);
+    } else {
+        m_microscopeViewLeft->m_image->setData(left_img_ptr->image.data, microscope_image_left_size);
+        m_microscopeViewRight->m_image->setData(right_img_ptr->image.data, microscope_image_right_size);
     }
-    else
-    {
-        m_rosImageTexture->m_image->setData(concat_img_ptr->image.data, ros_image_size);
-    }
+
+    // OLD CODE
+    // if (ros_image_size != texture_image_size)
+    // {
+    //     cout << "INITILIZE rosImageTexture" << endl;
+    //     m_rosImageTexture->m_image->erase();
+
+    //     // Original implementation in Xinhao's plugin
+    //     // m_rosImageTexture->m_image->allocate(cv_ptr->image.cols, cv_ptr->image.rows, getImageFormat(cv_ptr->encoding), getImageType(cv_ptr->encoding));
+
+    //     m_rosImageTexture->m_image->allocate(concat_img_ptr->image.cols, concat_img_ptr->image.rows, stereo_cam_info->pixel_format_gl, GL_UNSIGNED_BYTE);
+    //     m_rosImageTexture->m_image->setData(concat_img_ptr->image.data, ros_image_size);
+
+    //     // Only for debuggin purposes
+    //     // m_rosImageTexture->saveToFile("rosImageTexture_juan.png");
+    // }
+    // else
+    // {
+    //     m_rosImageTexture->m_image->setData(concat_img_ptr->image.data, ros_image_size);
+    // }
 
     //  cerr << "INFO! Image Sizes" << msg->width << "x" << msg->height << " - " << msg->encoding << endl;
-    m_rosImageTexture->markForUpdate();
+
+    m_microscopeViewLeft->markForUpdate();
+    m_microscopeViewRight->markForUpdate();
+
+    // OLD CODE
+    // m_rosImageTexture->markForUpdate();
 
 
+    // COMMENTING OUT TEMPORARY DEBUGGING FOR NOW BECAUSE NOT UP TO DATE
     // TEMPORARY DEBUGGING:
-    static bool debug_saved = false;
-    if (!debug_saved && !concat_img_ptr->image.empty())
-    {
-        std::cout << "[DEBUG] Saving debug image to /tmp/debug_concat_image.png\n";
-        // bool success = cv::imwrite("/tmp/debug_concat_image.png", concat_img_ptr->image);
-        bool success = cv::imwrite("/home/samvl7/SAINT/volumetric_drilling/plugin/sim_assisted_nav/shaders/debug_concat_image.png", concat_img_ptr->image);
-        if (success) {
-            std::cout << "[DEBUG] Image saved successfully.\n";
-        } else {
-            std::cerr << "[DEBUG] Failed to write image.\n";
-        }
-        debug_saved = true;
-    }
+    // static bool debug_saved = false;
+    // if (!debug_saved && !concat_img_ptr->image.empty())
+    // {
+    //     std::cout << "[DEBUG] Saving debug image to /tmp/debug_concat_image.png\n";
+    //     // bool success = cv::imwrite("/tmp/debug_concat_image.png", concat_img_ptr->image);
+    //     bool success = cv::imwrite("/home/samvl7/SAINT/volumetric_drilling/plugin/sim_assisted_nav/shaders/debug_concat_image.png", concat_img_ptr->image);
+    //     if (success) {
+    //         std::cout << "[DEBUG] Image saved successfully.\n";
+    //     } else {
+    //         std::cerr << "[DEBUG] Failed to write image.\n";
+    //     }
+    //     debug_saved = true;
+    // }
 
 
 

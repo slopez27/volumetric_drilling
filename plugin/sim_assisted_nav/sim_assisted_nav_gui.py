@@ -2,7 +2,7 @@
 from PyQt5.QtWidgets import (
     QWidget, QSlider, QVBoxLayout, QPushButton, QApplication, QLabel, QApplication, QGridLayout, QComboBox, QInputDialog
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from ambf_client import Client
 import sys
 
@@ -12,6 +12,8 @@ from geometry_msgs.msg import Point
 
 import yaml
 import os
+
+# import time
 
 class SimAssistedNavGUI(QWidget):
     def __init__(self):
@@ -34,7 +36,13 @@ class SimAssistedNavGUI(QWidget):
         # self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
         self.use_microscope = False
         self.toggle_view_button = QPushButton("Toggle View (Sim/Microscope)")
-        self.toggle_view_button.clicked.connect(self.toggle_view)     
+        self.toggle_view_button.clicked.connect(self.toggle_view)    
+
+        # add filepath options
+        self.saved_paths = []
+        self.path_dropdown = QComboBox()
+        self.new_file_path = QPushButton("Add New File Path")
+        self.new_file_path.clicked.connect(self.add_new_file_path) 
 
         # initialize button for hiding CT slices
         self.hide_ct = False
@@ -84,12 +92,6 @@ class SimAssistedNavGUI(QWidget):
         self.new_user_button = QPushButton("Add New User")
         self.new_user_button.clicked.connect(self.add_new_user)
 
-        # add filepath options
-        self.saved_paths = []
-        self.path_dropdown = QComboBox()
-        self.new_file_path = QPushButton("Add New File Path")
-        self.new_file_path.clicked.connect(self.add_new_file_path)
-
         # remember last used path
         self.config_file = 'gui_config.yaml'
         self.default_path = self.load_default_path()
@@ -137,14 +139,11 @@ class SimAssistedNavGUI(QWidget):
 
     def update_location(self, y_pos):
         msg = Point()
-        # msg.x = disparity
         msg.y = y_pos
-        # msg.z = x_pos
         self.location_pub.publish(msg)
         self.last_location = msg # to track last selection
 
     def update_manual_location(self):
-        # x_pos = self.x_slider.value() / 100.0  
         y_pos = self.y_slider.value() / 100.0  
         disparity = self.disparity_slider.value() / 100.0      
 
@@ -179,11 +178,14 @@ class SimAssistedNavGUI(QWidget):
         config = {
             'size_slider': self.size_slider.value(),
             'disparity_slider': self.disparity_slider.value(), 
+            'blending_slider': self.blending_slider.value(),
+            'hide_ct': self.hide_ct,
+            'use_microscope': self.use_microscope,
             'location': {
                 'x': self.last_location.x,
                 'y': self.last_location.y,
                 'z': self.last_location.z,
-            }   
+            } 
         }
         selected_path = self.path_dropdown.currentText()
         if not selected_path:
@@ -218,7 +220,7 @@ class SimAssistedNavGUI(QWidget):
             print("No file path selected!")
             return
         
-        filename = os.path.join(selected_path, 'window_configurations.yaml')
+        filename = os.path.join(path, 'window_configurations.yaml')
 
         if not os.path.exists(filename):
             print("No configuration file found.")
@@ -233,18 +235,45 @@ class SimAssistedNavGUI(QWidget):
             print("Preset not found.")
             return
 
-        self.size_slider.setValue(config['size_slider'])
-        self.disparity_slider.setValue(config['disparity_slider'])
+        if 'size_slider' in config:
+            self.size_slider.setValue(config['size_slider'])
 
-        loc = config['location']
-        self.update_location(loc['x'], loc['z'], loc['y'])
-        self.x_slider.setValue(int(loc['z'] * 100))
-        self.y_slider.setValue(int(loc['y'] * 100))
+        if 'disparity_slider' in config:
+            self.disparity_slider.setValue(config['disparity_slider'])
+
+        if 'blending_slider' in config:
+            self.blending_slider.setValue(config['blending_slider'])
+
+        if 'use_microscope' in config:
+            self.use_microscope = config['use_microscope']
+            self.toggle_pub.publish(Bool(data=self.use_microscope))
+
+        if 'hide_ct' in config:
+            self.hide_ct = config['hide_ct']
+            self.hide_ct_pub.publish(Bool(data=self.hide_ct))
+
+        if 'location' in config:
+            loc = config['location']
+            restored_point = Point(
+                loc.get('x', self.last_location.x),
+                loc.get('y', self.last_location.y),
+                loc.get('z', self.last_location.z)
+            )
+            self.last_location = restored_point
+            self.location_pub.publish(restored_point)
+            self.y_slider.setValue(int(restored_point.y * 100))
+        
 
         print(f"Loaded configuration for {user_id}-{preset}.")
 
     def refresh_presets(self):
-        filename = 'window_configurations.yaml'
+        selected_path = self.path_dropdown.currentText()
+
+        if not selected_path:
+            print("No file path selected!")
+            return
+
+        filename = os.path.join(selected_path, 'window_configurations.yaml')
 
         if not os.path.exists(filename):
             self.user_dropdown.clear()
@@ -261,7 +290,7 @@ class SimAssistedNavGUI(QWidget):
         user_list = list(all_configs.keys())
         if not user_list:
             user_list = ["user1"]
-            all_configs[user1] = {}
+            all_configs['user1'] = {}
         self.user_dropdown.addItems(user_list)
         self.user_dropdown.blockSignals(False)
 
@@ -287,7 +316,12 @@ class SimAssistedNavGUI(QWidget):
         if not ok or not new_user.strip():
             return
 
-        filename = 'window_configurations.yaml'
+        selected_path = self.path_dropdown.currentText()
+        if not selected_path:
+            print("No file path selected!")
+            return
+
+        filename = os.path.join(selected_path, 'window_configurations.yaml')
         if os.path.exists(filename):
             with open(filename, 'r') as f:
                 all_configs = yaml.safe_load(f) or {}
@@ -339,7 +373,6 @@ class SimAssistedNavGUI(QWidget):
     def save_default_path(self, path):
         with open(self.config_file, 'w') as f:
             yaml.dump({'last_path': path}, f)
-
 
 
 if __name__ == '__main__':

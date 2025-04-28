@@ -24,8 +24,10 @@
 #version 120
 
 // UNIFORMS
-uniform sampler2D rosImageTexture;
-uniform sampler2D frameBufferTexture;
+uniform sampler2D microscopeViewLeft; // GL_TEXTURE0 - texture for microscope view on the left side
+uniform sampler2D microscopeViewRight; // GL_TEXTURE3 - texture for microscope view on the right side
+
+uniform sampler2D frameBufferTexture; // GL_TEXTURE2...current uniform for the simulation
 
 uniform float small_window_disparity = 0.1;
 uniform int window_width = 1920;
@@ -104,55 +106,58 @@ void main()
 
     vec4 baseColor;
     vec2 baseCoord = output_loc;
-
-    if (toggle_sim_microscope == 0) {
-        if (hide_ct == 1) {
-            float localX = (output_loc.x < 0.5)
-                ? output_loc.x * 2.0
-                : (output_loc.x - 0.5) * 2.0;
-
-            float localY = output_loc.y;
-            baseCoord = vec2(0.5 + 0.5 * localX, 0.5 + 0.5 * localY);
-        } else {
-            baseCoord.x = (output_loc.x < 0.5)
-                ? output_loc.x * 2.0
-                : (output_loc.x - 0.5) * 2.0;
-        }
-
-        baseColor = texture2D(frameBufferTexture, baseCoord);
-    } else {
-        baseColor = texture2D(rosImageTexture, baseCoord);
-    }
-
-
+    vec2 microscopeCoord;
+    vec2 simCoord;
     vec4 overlayColor;
 
     bool inLeftWindow = output_loc.x >= rectMinL.x && output_loc.x <= rectMaxL.x && output_loc.y >= rectMinL.y && output_loc.y <= rectMaxL.y;
-
     bool inRightWindow = output_loc.x >= rectMinR.x && output_loc.x <= rectMaxR.x && output_loc.y >= rectMinR.y && output_loc.y <= rectMaxR.y;
+
+    if (toggle_sim_microscope == 0) {
+        if (output_loc.x < 0.5) { 
+            if (hide_ct == 1) {
+                simCoord = vec2(0.5 + output_loc.x * 2.0 * 0.5, 0.5 + output_loc.y * 0.5);            
+            } else {
+                simCoord = vec2(output_loc.x * 2.0, output_loc.y);
+            }
+        } else {  
+            if (hide_ct == 1) {
+                simCoord = vec2(0.5 + (output_loc.x - 0.5) * 2.0 * 0.5, 0.5 + output_loc.y * 0.5);
+            } else {
+                simCoord = vec2((output_loc.x - 0.5) * 2.0, output_loc.y);
+            }
+        }
+        simCoord = clamp(simCoord, 0.0, 1.0);
+        baseColor = texture2D(frameBufferTexture, simCoord);
+    } else {
+        if (output_loc.x < 0.5) {
+            microscopeCoord = vec2(output_loc.x * 2.0, output_loc.y);
+            microscopeCoord = clamp(microscopeCoord, 0.0, 1.0);
+            baseColor = texture2D(microscopeViewLeft, microscopeCoord);
+        } else {
+            microscopeCoord = vec2((output_loc.x - 0.5) * 2.0, output_loc.y);
+            microscopeCoord = clamp(microscopeCoord, 0.0, 1.0);
+            baseColor = texture2D(microscopeViewRight, microscopeCoord);
+        }
+    }
 
     if (inLeftWindow || inRightWindow) {
         vec2 output_loc2 = inLeftWindow
             ? remap_little_window(output_loc, rectMinL, rectMaxL)
             : remap_little_window(output_loc, rectMinR, rectMaxR);
-        
-        if (toggle_sim_microscope == 0) {
-            output_loc2.x = inLeftWindow
-                ? output_loc2.x * 0.5
-                : 0.5 + output_loc2.x * 0.5;
-            
-        } else {
-            if (hide_ct == 1) {
-                float localX = output_loc2.x;
-                float localY = output_loc2.y;
-                output_loc2 = vec2(0.5 + 0.5 * localX, 0.5 + 0.5 * localY);
-            }
+
+        if (toggle_sim_microscope == 1 && hide_ct == 1) {
+            output_loc2 = vec2(0.5 + 0.5 * output_loc2.x, 0.5 + 0.5 * output_loc2.y);
         }
 
-        overlayColor = (toggle_sim_microscope == 1)
-            ? texture2D(frameBufferTexture, output_loc2)
-            : texture2D(rosImageTexture, output_loc2);
-        
+        if (toggle_sim_microscope == 1) {
+            overlayColor = texture2D(frameBufferTexture, output_loc2);
+        } else {
+            overlayColor = inLeftWindow
+                ? texture2D(microscopeViewLeft, output_loc2)
+                : texture2D(microscopeViewRight, output_loc2);
+        }
+
         gl_FragColor = mix(overlayColor, baseColor, blending_ratio);
     } else {
         gl_FragColor = baseColor;
