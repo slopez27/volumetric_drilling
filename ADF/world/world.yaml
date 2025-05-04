@@ -45,7 +45,19 @@ light3:
 main_camera:
   namespace: cameras/
   name: main_camera
-  parent: VOLUME mastoidectomy_volume 
+  parent: VOLUME mastoidectomy_volume # going to comment this out to see if it fixes the issue
+  # parent: BODY volume_anatomical_origin
+
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # # TODO: this is what i am trying out - SAMANTA
+  
+  # position: {x: 0.0, y: -0.3, z: 0.2}
+  # look at: {x: 0.0, y: 0.0, z: 0.05}
+  # up: {x: 0.0, y: 0.0, z: 1.0}
+  # clipping plane: { near: 2.0135309278350517, far: 1006.7654639175257 }
+  # field view angle: 0.5
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   # parent: BODY volume_anatomical_origin
 
   ## ORIGINAL VOLUMETRIC DRILLING
@@ -67,30 +79,30 @@ main_camera:
   # look at: { x: -0.0216465, y: 0.0155717, z: 0.0383901 }
   # up: { x: 0.0, y: 1.0, z: 0.0 }
 
-  # Parenting to the volume.
-  location: {x: 0.009, y: -0.72, z: -0.164 }
-  look at: { x: 0.0, y: 0.0, z: 0.0 }
-  # look at: { x: -0.0216465, y: 0.0155717, z: 0.0383901 }
-  up: { x: 0.86, y: 0.5, z: 0.0 }
+  # # Parenting to the volume.
+  location: {x: 0.009, y: -0.72, z: -0.164 } # OG
+  look at: { x: 0.0, y: 0.0, z: 0.0 } # OG
+  # # # look at: { x: -0.0216465, y: 0.0155717, z: 0.0383901 }
+  up: { x: 0.86, y: 0.5, z: 0.0 } # OG
 
-  clipping plane: { near: 0.2, far: 1006.7654639175257 }
-  field view angle: 0.17951634837990105
+  clipping plane: { near: 0.2, far: 1006.7654639175257 } # OG
+  field view angle: 0.17951634837990105 # OG
 
-  monitor: 0
-  # stereo: {mode: Passive, eye separation: 0.15, focal length: 200}
-  # multipass: true
-  visible: true
-  mouse control multipliers: {pan: 0.1, rotate: 0.1, scroll: 0.1, arcball: 0.1}
-  # publish image: true
-  # preprocessing shaders:
-  #    path: ../shaders/preprocessing/
-  #    vertex: shader.vs
-  #    fragment: shader.fs
-  # publish image interval: 5 # Publish every nth scene update
-  # publish depth: true
-  # publish depth noise: {mean: 0.1, std_dev: 0.01, bias: 0.0}
-  # publish depth interval: 1 # Publish every nth scene update
-  publish image resolution: { width: 640, height: 480 }
+  monitor: 0 # OG
+  # # stereo: {mode: Passive, eye separation: 0.15, focal length: 200}
+  # # multipass: true
+  visible: true # OG
+  mouse control multipliers: {pan: 0.2, rotate: 0.2, scroll: 0.2, arcball: 0.2} # OG
+  # # publish image: true
+  # # preprocessing shaders:
+  # #    path: ../shaders/preprocessing/
+  # #    vertex: shader.vs
+  # #    fragment: shader.fs
+  # # publish image interval: 5 # Publish every nth scene update
+  # # publish depth: true
+  # # publish depth noise: {mean: 0.1, std_dev: 0.01, bias: 0.0}
+  # # publish depth interval: 1 # Publish every nth scene update
+  # publish image resolution: { width: 640, height: 480 } # OG
   # depth compute shaders:
   #    path: ../../../ambf_shaders/depth
   #    vertex: shader.vs
@@ -98,6 +110,7 @@ main_camera:
 
   # multipass: true
 
+# Comenting out for a sec
   plugins:
     [
       ## See graphics function in the multiview.cpp. The camera doesn't render by default.
@@ -113,6 +126,7 @@ main_camera:
 cameraL:
   namespace: cameras/
   name: cameraL
+  # plugin: stereo_disparity_plugin
   location: { x: 0.0, y: -0.3, z: 0.0 }
   look at: { x: -15.0, y: 0.0, z: 0.0 }
   up: { x: 0.0, y: 0.0, z: 1.0 }
@@ -135,7 +149,7 @@ cameraL:
   #    path: ../../../ambf_shaders/depth
   #    vertex: shader.vs
   #    fragment: shader.fs
-  parent: main_camera
+  # parent: main_camera # commenting out for
 
 cameraR:
   namespace: cameras/
@@ -162,4 +176,4 @@ cameraR:
   #    path: ../../../ambf_shaders/depth
   #    vertex: shader.vs
   #    fragment: shader.fs
-  parent: main_camera
+  # parent: main_camera # commenting out for now

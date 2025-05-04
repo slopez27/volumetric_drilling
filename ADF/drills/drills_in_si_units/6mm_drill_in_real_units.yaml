@@ -78,7 +78,7 @@ BODY drill_empty_reference:
   name: drill_empty_reference
   mesh: ""
   collision mesh: ""
-  collision mesh type: ""
+  collision mesh type: BOX
   mass: 0.0
   inertia:
     ix: 0.0

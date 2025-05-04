@@ -235,9 +235,9 @@ BODY 6mm:
   #   transparency: 1.0
 BODY mastoidectomy_drill:
   name: mastoidectomy_drill
-  mesh: ''
-  collision mesh: ''
-  collision mesh type: ''
+  mesh: 4mm.OBJ
+  collision mesh: 4mm.OBJ
+  collision mesh type: CONCAVE_MESH
   mass: 0.0
   inertia:
     ix: 0.0
