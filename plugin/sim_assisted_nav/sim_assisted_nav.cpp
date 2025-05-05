@@ -619,29 +619,29 @@ void afCameraHMD::window_location_callback(const geometry_msgs::Point::ConstPtr 
     small_window_y_pos = msg->y;
     small_window_x_pos = msg->z;
     window_disparity = msg->x;
-    updateHMDParams(); // call function that pushes the change to the shader
+    // updateHMDParams(); // call function that pushes the change to the shader
 }
 
 void afCameraHMD::window_size_callback(const geometry_msgs::Point::ConstPtr &msg) {
     small_window_height = msg->x;
-    updateHMDParams();
+    // updateHMDParams();
 }
 
 void afCameraHMD::toggle_sim_microscope_callback(const std_msgs::Bool &msg) {
     toggle_sim_microscope = msg.data ? 1: 0;
     std::cout << "[TOGGLE] Received toggle_sim_microscope = " << toggle_sim_microscope << std::endl;
-    updateHMDParams();
+    // updateHMDParams();
 
 }
 
 void afCameraHMD::blending_ratio_callback(const std_msgs::Float32 &msg) {
     blending_ratio = msg.data;
     std::cout << "[BLENDING] Received blending_ratio = " << blending_ratio << std::endl;
-    updateHMDParams();
+    // updateHMDParams();
 }
 
 void afCameraHMD::hide_ct_callback(const std_msgs::Bool &msg) {
     hide_ct = msg.data ? 1 : 0;
     std::cout << "[HIDE CT] Received hide_ct = " << hide_ct << std::endl;
-    updateHMDParams();
+    // updateHMDParams();
 }
