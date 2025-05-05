@@ -52,6 +52,8 @@
 using namespace std;
 using namespace ambf;
 
+// extern bool g_showColoredBackground; // to figure out if toggling of 3d views is on or off
+
 // class SliceAnnotator;
 class SideViewWindow;
 class CtSliceSideWindow;
@@ -183,6 +185,7 @@ class CtSliceSideWindow : public SideViewWindow
     cBackground *background;
     cImagePtr outofvolume_cimage;
     cImagePtr background_cimage;
+    cMesh* view_border = nullptr;
 
 public:
     float scale_factor = -1.0;

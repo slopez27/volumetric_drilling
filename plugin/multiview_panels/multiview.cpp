@@ -46,8 +46,10 @@
 #include <ambf_server/RosComBase.h>
 #include <yaml-cpp/yaml.h>
 #include <algorithm>
-
+#include "../shared/shared.h"
 using namespace std;
+
+bool g_showColoredBackground = true;  // default to visible 3D views
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -458,14 +460,27 @@ CtSliceSideWindow::CtSliceSideWindow(string window_name, cCamera *camera, int m_
     // Set background
     background = new cBackground();
     camera->m_backLayer->addChild(background);
-    background->setCornerColors(cColorf(1.0f, 0.0f, 1.0f),
-                                cColorf(1.0f, 0.0f, 1.0f),
-                                cColorf(0.0f, 0.8f, 0.8f),
-                                cColorf(0.0f, 0.8f, 0.8f));
+    cColorf bgColor;
+    if (!g_showColoredBackground) {
+        bgColor = cColorf(0.0f, 0.0f, 0.0f); // default
+    }
+    if (window_name == "coronal_view") {
+        bgColor = cColorf(1.0f, 0.0f, 0.0f); // red
+    } else if (window_name == "sagittal_view") {
+        bgColor = cColorf(1.0f, 1.0f, 0.1f); // yellow
+    } else if (window_name == "axial_view") {
+        bgColor = cColorf(0.0f, 1.0f, 0.0f); // green
+    } 
+
+    background->setCornerColors(bgColor, bgColor, bgColor, bgColor);
+    background->setUseTransparency(true);
+    background->setTransparencyLevel(0.5);
 
     // load bitmaps
     background_cbitmap = new cBitmap();
     background_cbitmap->loadFromImage(background_cimage);
+    background_cbitmap->setUseTransparency(true);
+    background_cbitmap->setTransparencyLevel(0.5); 
     camera->m_frontLayer->addChild(background_cbitmap);
 
     ctslice_cbitmap = new cBitmap();

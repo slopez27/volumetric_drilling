@@ -45,6 +45,7 @@
 
 #include "volumetric_drilling.h"
 #include <boost/program_options.hpp>
+#include "../shared/shared.h"
 
 using namespace std;
 
@@ -175,6 +176,10 @@ int afVolmetricDrillingPlugin::init(int argc, char **argv, const afWorldPtr a_af
 
         m_maxVolCorner = m_voxelObj->m_maxCorner;
         m_minVolCorner = m_voxelObj->m_minCorner;
+
+        std::cout << "[VOLUME INIT] Min corner: " << m_minVolCorner.str() << std::endl;
+        std::cout << "[VOLUME INIT] Max corner: " << m_maxVolCorner.str() << std::endl;
+        
         m_maxTexCoord = m_voxelObj->m_maxTextureCoord;
         m_minTexCoord = m_voxelObj->m_minTextureCoord;
 
@@ -243,12 +248,82 @@ int afVolmetricDrillingPlugin::init(int argc, char **argv, const afWorldPtr a_af
     m_drillTipPtr = m_worldPtr->getRigidBody("drill_tip");
     m_drillReferencePtr = m_worldPtr->getRigidBody("drill_empty_reference");
 
+    // adding for 3d views (Dr. Munawar)
+    cVector3d planeMaximumDimensions = m_volumeObject->getDimensions() * 1.5; // Scale by 1.5 or any number
+    double planeThickness = 0.0005; // Plane thickness
+
+    m_xyPlane = new cMesh();
+    cCreateBox(m_xyPlane, planeMaximumDimensions.x(), planeMaximumDimensions.y(), planeThickness);
+    m_xyPlane->m_material->setRed(); // Could be set in the ADF file
+    m_xyPlane->setTransparencyLevel(0.3); // Could also be set in the ADF file
+
+    m_yzPlane = new cMesh();
+    cCreateBox(m_yzPlane, planeThickness, planeMaximumDimensions.y(), planeMaximumDimensions.z());
+    m_yzPlane->m_material->setGreen();
+    m_yzPlane->setTransparencyLevel(0.3);
+
+    m_zxPlane = new cMesh();
+    cCreateBox(m_zxPlane, planeMaximumDimensions.x(), planeThickness, planeMaximumDimensions.z());
+    m_zxPlane->m_material->setYellow();
+    m_zxPlane->setTransparencyLevel(0.3);
+
+    m_volumeObject->getInternalVolume()->addChild(m_xyPlane);
+    m_volumeObject->getInternalVolume()->addChild(m_yzPlane);
+    m_volumeObject->getInternalVolume()->addChild(m_zxPlane);
+
+    // initialize rostopics
+    ros::NodeHandle nh;
+    m_subXY = nh.subscribe("/volumetric_drilling/xyPlaneOffsetZ", 1, &afVolmetricDrillingPlugin::callbackXY, this);
+    m_subYZ = nh.subscribe("/volumetric_drilling/yzPlaneOffsetX", 1, &afVolmetricDrillingPlugin::callbackYZ, this);
+    m_subZX = nh.subscribe("/volumetric_drilling/zxPlaneOffsetY", 1, &afVolmetricDrillingPlugin::callbackZX, this);
+
+    m_subSyncPlanesToDrill = nh.subscribe("/volumetric_drilling/sync_planes_to_drill", 1, &afVolmetricDrillingPlugin::callbackSyncPlanesToDrill, this);
+    m_subShowPlanes = nh.subscribe("/volumetric_drilling/show_planes", 1, &afVolmetricDrillingPlugin::callbackShowPlanes, this);
+
     return 1;
 }
 
+void afVolmetricDrillingPlugin::updatePlanes() {
+    m_xyPlane->setLocalPos(0.0, 0.0, m_xyPlaneOffsetZ);
+    m_yzPlane->setLocalPos(m_yzPlaneOffsetX, 0.0, 0.0);
+    m_zxPlane->setLocalPos(0.0, m_zxPlaneOffsetY, 0.0);
+}
+
+// callback methods
+
+void afVolmetricDrillingPlugin::callbackXY(const std_msgs::Float32::ConstPtr& msg) {
+    m_xyPlaneOffsetZ = msg->data;
+    std::cerr << "[XY callback] " << m_xyPlaneOffsetZ << std::endl;
+}
+
+void afVolmetricDrillingPlugin::callbackYZ(const std_msgs::Float32::ConstPtr& msg) {
+    m_yzPlaneOffsetX = msg->data;
+    std::cerr << "[YZ callback] " << m_yzPlaneOffsetX << std::endl;
+}
+
+void afVolmetricDrillingPlugin::callbackZX(const std_msgs::Float32::ConstPtr& msg) {
+    m_zxPlaneOffsetY = msg->data;
+    std::cerr << "[ZX callback] " << m_zxPlaneOffsetY << std::endl;
+}
+
+void afVolmetricDrillingPlugin::callbackSyncPlanesToDrill(const std_msgs::Bool::ConstPtr& msg) {
+    m_syncPlanesToDrill = msg->data;
+    std::cerr << "[SyncPlanesToDrill callback] m_syncPlanesToDrill = " << m_syncPlanesToDrill << std::endl;
+}
+
+void afVolmetricDrillingPlugin::callbackShowPlanes(const std_msgs::Bool::ConstPtr& msg) {
+    m_showPlanes = msg->data;
+    g_showColoredBackground = msg->data;
+    std::cerr << "[ShowPlanes callback] Visibility = " << std::boolalpha << m_showPlanes << std::endl;
+
+    m_xyPlane->setShowEnabled(m_showPlanes);
+    m_yzPlane->setShowEnabled(m_showPlanes);
+    m_zxPlane->setShowEnabled(m_showPlanes);
+}
+
+
 void afVolmetricDrillingPlugin::graphicsUpdate()
 {
-
     // update region of voxels to be updated
     if (m_flagMarkVolumeForUpdate)
     {
@@ -271,10 +346,66 @@ void afVolmetricDrillingPlugin::graphicsUpdate()
     m_gazeMarkerController.update(dt);
     updateButtons();
     m_panelManager.update();
+
+    // std::cerr << "[graphicsUpdate] Applying plane offsets - "
+    // << "XY(z): " << m_xyPlaneOffsetZ << ", "
+    // << "YZ(x): " << m_yzPlaneOffsetX << ", "
+    // << "ZX(y): " << m_zxPlaneOffsetY << std::endl;
+
+    // static double testZ = 0.0;
+    // testZ += 0.001;
+
+    // updating 3d plane
+    // m_xyPlane->setLocalPos(0.0, 0.0, testZ);
+    // m_xyPlane->setLocalPos(0.0, 0.0, m_xyPlaneOffsetZ);
+    // m_yzPlane->setLocalPos(m_yzPlaneOffsetX, 0.0, 0.0);
+    // m_zxPlane->setLocalPos(0.0, m_zxPlaneOffsetY, 0.0);
+
+    if (!m_syncPlanesToDrill) {
+        m_xyPlane->setLocalPos(m_xyPlane->getLocalPos().x(), m_xyPlane->getLocalPos().y(), m_xyPlaneOffsetZ);
+        m_yzPlane->setLocalPos(m_yzPlaneOffsetX, m_yzPlane->getLocalPos().y(), m_yzPlane->getLocalPos().z());
+        m_zxPlane->setLocalPos(m_zxPlane->getLocalPos().x(), m_zxPlaneOffsetY, m_zxPlane->getLocalPos().z());
+        
+    } else {
+        m_xyPlane->setLocalPos(0.0, 0.0, m_xyPlaneOffsetZ);
+        m_yzPlane->setLocalPos(m_yzPlaneOffsetX, 0.0, 0.0);
+        m_zxPlane->setLocalPos(0.0, m_zxPlaneOffsetY, 0.0);
+    }
+    
 }
 
 void afVolmetricDrillingPlugin::physicsUpdate(double dt)
 {
+    ros::spinOnce();
+
+    if (m_syncPlanesToDrill) {
+        cout << "[PhysicsUpdate] entered!" << endl;
+        cVector3d drill_world = m_drillManager.m_drillReferenceBody->getLocalPos();
+        cout << "[DEBUG] Drill world pos: " << drill_world.str() << endl;
+        // Dr. Munawar Code
+        cTransform T_v_w = m_volumeObject->getLocalTransform(); 
+        cout << "[DEBUG] Volume world transform: " << T_v_w.getLocalPos().str() << endl;
+        T_v_w.invert();
+        cVector3d localPos = T_v_w * drill_world;
+        cout << "[DEBUG] Drill pos in volume coords: " << localPos.str() << endl;
+        cVector3d vIdx;
+        if (m_volumeObject->localPosToVoxelIndex(localPos, vIdx)){
+            cout << "[DEBUG] Drill local position in volume coords: " << localPos.str() << endl;
+            if (vIdx.x() >= 0 && vIdx.y() >= 0 && vIdx.z() >= 0){ // Added this as there is a bug in the method localPosToVoxelIndex
+                cout << "[INFO] Voxel Index: " << vIdx.str() << endl;
+                cVector3d currPos;
+                currPos = m_xyPlane->getLocalPos();
+                m_xyPlane->setLocalPos(currPos.x(), currPos.y(), localPos.z());
+
+                currPos = m_yzPlane->getLocalPos();
+                m_yzPlane->setLocalPos(localPos.x(), currPos.y(), currPos.z());
+
+                currPos = m_zxPlane->getLocalPos();
+                m_zxPlane->setLocalPos(currPos.x(), localPos.y(), currPos.z());
+
+            }
+        }
+    }
 
     m_worldPtr->getChaiWorld()->computeGlobalPositions(true);
 

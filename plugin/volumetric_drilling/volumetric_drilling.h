@@ -70,6 +70,23 @@ public:
     virtual void reset() override;
     virtual bool close() override;
 
+    // offset variables
+    float m_xyPlaneOffsetZ = 0.0;
+    float m_yzPlaneOffsetX = 0.0;
+    float m_zxPlaneOffsetY = 0.0;
+
+    // ros subscribers
+    ros::Subscriber m_subXY;
+    ros::Subscriber m_subYZ;
+    ros::Subscriber m_subZX;
+    ros::Subscriber m_subSyncPlanesToDrill;
+    ros::Subscriber m_subShowPlanes;
+
+    // bool to turn planes on and off
+    bool m_syncPlanesToDrill = false; // false = off
+    bool m_showPlanes = true;
+
+
 protected:
     void sliceVolume(int axisIdx, double delta);
 
@@ -82,6 +99,20 @@ protected:
     afCameraPtr findAndAppendCamera(string cam_name);
 
     void publishDrillTipLocationInsideVolume();
+
+    // adding 
+    void updatePlanes();
+
+    void callbackXY(const std_msgs::Float32::ConstPtr& msg);
+    
+    void callbackYZ(const std_msgs::Float32::ConstPtr& msg);
+    
+    void callbackZX(const std_msgs::Float32::ConstPtr& msg);
+
+    void callbackSyncPlanesToDrill(const std_msgs::Bool::ConstPtr& msg);
+
+    void callbackShowPlanes(const std_msgs::Bool::ConstPtr& msg);
+
 
 private:
     cVoxelObject *m_voxelObj;
@@ -152,6 +183,11 @@ private:
     bool m_isUsingDrillForCursor = true;
     afRigidBodyPtr m_drillTipPtr, m_drillReferencePtr;
     cVector3d manual_indexes_for_slices = cVector3d(0, 0, 0);
+
+    // Dr. Munawar definitions
+    cMesh* m_xyPlane;
+    cMesh* m_yzPlane;
+    cMesh* m_zxPlane;
 };
 
 class Transform2VolumeCoordinates
