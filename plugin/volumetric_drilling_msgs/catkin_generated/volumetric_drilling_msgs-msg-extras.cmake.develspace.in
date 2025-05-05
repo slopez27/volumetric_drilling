@@ -1,0 +1,2 @@
+set(volumetric_drilling_msgs_MESSAGE_FILES "/home/samvl7/SAINT/volumetric_drilling/volumetric_drilling_msgs/msg/Index.msg;/home/samvl7/SAINT/volumetric_drilling/volumetric_drilling_msgs/msg/Voxels.msg;/home/samvl7/SAINT/volumetric_drilling/volumetric_drilling_msgs/msg/DrillSize.msg;/home/samvl7/SAINT/volumetric_drilling/volumetric_drilling_msgs/msg/VolumeInfo.msg")
+set(volumetric_drilling_msgs_SERVICE_FILES "")

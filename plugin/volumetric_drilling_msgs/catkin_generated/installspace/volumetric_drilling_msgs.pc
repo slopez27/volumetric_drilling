@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: volumetric_drilling_msgs
+Description: Description of volumetric_drilling_msgs
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: message_runtime

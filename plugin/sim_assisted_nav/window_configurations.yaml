@@ -1,0 +1,76 @@
+AV:
+  preset1:
+    blending_slider: 68
+    disparity_slider: 24
+    hide_ct: true
+    location:
+      x: 0.2
+      y: 0.36
+      z: 0.0
+    size_slider: 41
+    use_microscope: true
+sam:
+  preset1:
+    blending_slider: 30
+    disparity_slider: 10
+    hide_ct: false
+    location:
+      x: 0.002
+      y: 0.75
+      z: 0.1
+    size_slider: 38
+    use_microscope: false
+sam2:
+  preset2:
+    blending_slider: 30
+    disparity_slider: 10
+    hide_ct: false
+    location:
+      x: 0.002
+      y: 0.75
+      z: 0.1
+    size_slider: 38
+    use_microscope: false
+  preset4:
+    blending_slider: 30
+    disparity_slider: 10
+    hide_ct: false
+    location:
+      x: 0.002
+      y: 0.75
+      z: 0.1
+    size_slider: 38
+    use_microscope: false
+samanta: {}
+test: {}
+test2: {}
+user1:
+  preset1:
+    disparity_slider: 13
+    location:
+      x: 0.002
+      y: 1.0
+      z: 0.0
+    size_slider: 41
+  preset2:
+    disparity_slider: 13
+    location:
+      x: 0.002
+      y: 0.0
+      z: 1.0
+    size_slider: 41
+user2:
+  preset1_user2:
+    disparity_slider: 13
+    location:
+      x: 0.002
+      y: 1.0
+      z: 1.0
+    size_slider: 41
+  preset2_user2:
+    disparity_slider: 13
+    location:
+      x: 0.002
+      y: 0.48
+      z: 0.38
+    size_slider: 41

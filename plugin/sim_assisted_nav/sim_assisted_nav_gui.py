@@ -32,6 +32,15 @@ class SimAssistedNavGUI(QWidget):
         self.blending_pub = rospy.Publisher('/sim_assisted_nav/blending_ratio', Float32, queue_size=1)
         self.hide_ct_pub = rospy.Publisher('/sim_assisted_nav/hide_ct', Bool, queue_size=1)
 
+        # topics for moving 3D planes
+        self.xy_offset_pub = rospy.Publisher('/volumetric_drilling/xyPlaneOffsetZ', Float32, queue_size=1)
+        self.yz_offset_pub = rospy.Publisher('/volumetric_drilling/yzPlaneOffsetX', Float32, queue_size=1)
+        self.zx_offset_pub = rospy.Publisher('/volumetric_drilling/zxPlaneOffsetY', Float32, queue_size=1)
+
+        # 3D planes syncing and on/off
+        self.show_planes_pub = rospy.Publisher('/volumetric_drilling/show_planes', Bool, queue_size=1)
+        self.sync_pub = rospy.Publisher('/volumetric_drilling/sync_planes_to_drill', Bool, queue_size=1)
+
         # adding button for changing view of microscope or simulation
         # self.view_toggle_pub = rospy.Publisher('/sim_assisted_nav/view_toggle', Bool, queue_size=1)
         self.use_microscope = False
@@ -100,6 +109,40 @@ class SimAssistedNavGUI(QWidget):
             self.path_dropdown.addItem(self.default_path)
             self.path_dropdown.setCurrentText(self.default_path)
 
+        # 3D planes
+        self.xy_slider = QSlider(Qt.Horizontal)
+        self.xy_slider.setMinimum(-100)
+        self.xy_slider.setMaximum(100)
+        self.xy_slider.setValue(0)
+        self.xy_slider.valueChanged.connect(self.update_xy_offset)
+
+        self.yz_slider = QSlider(Qt.Horizontal)
+        self.yz_slider.setMinimum(-100)
+        self.yz_slider.setMaximum(100)
+        self.yz_slider.setValue(0)
+        self.yz_slider.valueChanged.connect(self.update_yz_offset)
+
+        self.zx_slider = QSlider(Qt.Horizontal)
+        self.zx_slider.setMinimum(-100)
+        self.zx_slider.setMaximum(100)
+        self.zx_slider.setValue(0)
+        self.zx_slider.valueChanged.connect(self.update_zx_offset)
+
+        # sync planes
+        self.sync_planes_to_drill = False
+        self.sync_button = QPushButton("Sync Planes to Drill")
+        self.sync_button.setCheckable(True)
+        self.sync_button.setChecked(False)
+        self.sync_button.clicked.connect(self.toggle_sync_planes)
+
+        # planes on/off
+        self.show_planes = True
+        self.plane_visibility_button = QPushButton("Toggle Plane Visibility")
+        self.plane_visibility_button.setCheckable(True)
+        self.plane_visibility_button.setChecked(True)
+        self.plane_visibility_button.clicked.connect(self.toggle_plane_visibility)
+
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Switch Main View (Simulation/ Microscope)"))
         layout.addWidget(self.toggle_view_button)
@@ -123,8 +166,29 @@ class SimAssistedNavGUI(QWidget):
         layout.addWidget(QLabel("Add FilePath"))
         layout.addWidget(self.path_dropdown)
         layout.addWidget(self.new_file_path)
+        layout.addWidget(QLabel("Show/Hide 3D Planes"))
+        layout.addWidget(self.plane_visibility_button)
+        layout.addWidget(QLabel("Sync Planes to Drill Tip"))
+        layout.addWidget(self.sync_button)
+        layout.addWidget(QLabel("Z-Plane Offset"))
+        layout.addWidget(self.xy_slider)
+        layout.addWidget(QLabel("X-Plane Offset"))
+        layout.addWidget(self.yz_slider)
+        layout.addWidget(QLabel("Y-Plane Offset"))
+        layout.addWidget(self.zx_slider)
 
         self.setLayout(layout)
+
+    def toggle_sync_planes(self):
+        self.sync_planes_to_drill = self.sync_button.isChecked()
+        self.sync_pub.publish(Bool(data=self.sync_planes_to_drill))
+        self.sync_button.setText(f"Sync Planes to Drill: {'ON' if self.sync_planes_to_drill else 'OFF'}")
+
+    def toggle_plane_visibility(self):
+        self.show_planes = self.plane_visibility_button.isChecked()
+        self.show_planes_pub.publish(Bool(data=self.show_planes))
+        self.plane_visibility_button.setText(f"Toggle Plane Visibility: {'ON' if self.show_planes else 'OFF'}")
+
 
     def add_button(self, layout, name, callback, row=0, col=0):
         btn = QPushButton(name)
@@ -373,6 +437,19 @@ class SimAssistedNavGUI(QWidget):
     def save_default_path(self, path):
         with open(self.config_file, 'w') as f:
             yaml.dump({'last_path': path}, f)
+
+    def update_xy_offset(self, value):
+        offset = value / 100.0 
+        self.xy_offset_pub.publish(Float32(data=offset))
+
+    def update_yz_offset(self, value):
+        offset = value / 100.0
+        self.yz_offset_pub.publish(Float32(data=offset))
+
+    def update_zx_offset(self, value):
+        offset = value / 100.0
+        self.zx_offset_pub.publish(Float32(data=offset))
+
 
 
 if __name__ == '__main__':
